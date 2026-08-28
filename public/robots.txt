@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://zey-ro.github.io/poople/sitemap.xml
