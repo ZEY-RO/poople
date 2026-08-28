@@ -2,11 +2,10 @@
 
 A complete, feature-rich word ladder puzzle game built for the browser. Transform any 4-letter starting word into **"POOP"** one valid letter at a time!
 
-![POOPLE Game Preview](https://img.shields.io/badge/Game-Poople-amber?style=for-the-badge&logo=target)
-![React](https://img.shields.io/badge/React-18-blue?style=for-the-badge&logo=react)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue?style=for-the-badge&logo=typescript)
-![Vite](https://img.shields.io/badge/Vite-6-purple?style=for-the-badge&logo=vite)
-![TailwindCSS](https://img.shields.io/badge/Tailwind-3.4-38bdf8?style=for-the-badge&logo=tailwindcss)
+[![Play Poople Live](https://img.shields.io/badge/🎮%20Play%20Online-Live%20Demo-emerald?style=for-the-badge&logo=googlechrome)](https://zey-ro.github.io/poople/)
+[![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-blue?style=for-the-badge&logo=github)](https://github.com/ZEY-RO/poople)
+
+🌐 **Live Game URL**: [https://zey-ro.github.io/poople/](https://zey-ro.github.io/poople/)
 
 ---
 
