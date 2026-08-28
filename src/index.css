@@ -1,0 +1,182 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --bg-primary: #fffbeb;
+    --bg-secondary: #fef3c7;
+    --bg-card: #ffffff;
+    --text-primary: #451a03;
+    --text-secondary: #78350f;
+    --text-muted: #a16207;
+    --accent: #d97706;
+    --accent-hover: #b45309;
+    --accent-light: #fde68a;
+    --border-color: #fde68a;
+    --tile-empty: #f3f4f6;
+    --tile-border: #d1d5db;
+    --tile-active-bg: #fef08a;
+    --tile-active-border: #eab308;
+    --tile-diff-bg: #fed7aa;
+    --tile-diff-text: #9a3412;
+    --tile-correct-bg: #86efac;
+    --tile-correct-text: #14532d;
+    --poop-accent: #854d0e;
+  }
+
+  .theme-dark {
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-card: #1e293b;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --text-muted: #94a3b8;
+    --accent: #f59e0b;
+    --accent-hover: #d97706;
+    --accent-light: #334155;
+    --border-color: #334155;
+    --tile-empty: #1e293b;
+    --tile-border: #475569;
+    --tile-active-bg: #3b82f620;
+    --tile-active-border: #60a5fa;
+    --tile-diff-bg: #f59e0b30;
+    --tile-diff-text: #fbbf24;
+    --tile-correct-bg: #22c55e30;
+    --tile-correct-text: #4ade80;
+    --poop-accent: #f59e0b;
+  }
+
+  .theme-poop {
+    --bg-primary: #3b2416;
+    --bg-secondary: #4a2e1d;
+    --bg-card: #5a3824;
+    --text-primary: #fff8f0;
+    --text-secondary: #fed7aa;
+    --text-muted: #fdba74;
+    --accent: #fb923c;
+    --accent-hover: #f97316;
+    --accent-light: #6b432c;
+    --border-color: #784c32;
+    --tile-empty: #4a2e1d;
+    --tile-border: #784c32;
+    --tile-active-bg: #ea580c30;
+    --tile-active-border: #fb923c;
+    --tile-diff-bg: #ea580c;
+    --tile-diff-text: #ffffff;
+    --tile-correct-bg: #84cc16;
+    --tile-correct-text: #1a2e05;
+    --poop-accent: #fdba74;
+  }
+
+  .theme-retro {
+    --bg-primary: #121019;
+    --bg-secondary: #211c2e;
+    --bg-card: #2c253d;
+    --text-primary: #00ffcc;
+    --text-secondary: #ff77a8;
+    --text-muted: #a3a7c2;
+    --accent: #ff007f;
+    --accent-hover: #e60073;
+    --accent-light: #3d3454;
+    --border-color: #00ffcc;
+    --tile-empty: #1a1626;
+    --tile-border: #52476b;
+    --tile-active-bg: #ff007f30;
+    --tile-active-border: #ff007f;
+    --tile-diff-bg: #00ffcc;
+    --tile-diff-text: #121019;
+    --tile-correct-bg: #ffeb3b;
+    --tile-correct-text: #121019;
+    --poop-accent: #00ffcc;
+  }
+
+  .theme-gold {
+    --bg-primary: #1c1917;
+    --bg-secondary: #292524;
+    --bg-card: #292524;
+    --text-primary: #fef08a;
+    --text-secondary: #fde047;
+    --text-muted: #ca8a04;
+    --accent: #eab308;
+    --accent-hover: #ca8a04;
+    --accent-light: #44403c;
+    --border-color: #eab30860;
+    --tile-empty: #292524;
+    --tile-border: #78716c;
+    --tile-active-bg: #eab30830;
+    --tile-active-border: #facc15;
+    --tile-diff-bg: #eab308;
+    --tile-diff-text: #1c1917;
+    --tile-correct-bg: #22c55e;
+    --tile-correct-text: #052e16;
+    --poop-accent: #fde047;
+  }
+
+  .theme-pastel {
+    --bg-primary: #fdf2f8;
+    --bg-secondary: #fce7f3;
+    --bg-card: #ffffff;
+    --text-primary: #831843;
+    --text-secondary: #9d174d;
+    --text-muted: #be185d;
+    --accent: #ec4899;
+    --accent-hover: #db2777;
+    --accent-light: #fbcfe8;
+    --border-color: #fbcfe8;
+    --tile-empty: #fdf2f8;
+    --tile-border: #f472b6;
+    --tile-active-bg: #fdf2f8;
+    --tile-active-border: #ec4899;
+    --tile-diff-bg: #f472b6;
+    --tile-diff-text: #ffffff;
+    --tile-correct-bg: #a7f3d0;
+    --tile-correct-text: #064e3b;
+    --poop-accent: #be185d;
+  }
+}
+
+body {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.3s ease, color 0.3s ease;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(160, 100, 50, 0.25);
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(160, 100, 50, 0.45);
+}
+
+/* Button & Key Press Effects */
+.btn-press {
+  transition: all 0.1s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.btn-press:active {
+  transform: scale(0.95);
+}
+
+/* Custom Glows */
+.glow-gold {
+  box-shadow: 0 0 20px rgba(234, 179, 8, 0.45);
+}
+
+.glow-poop {
+  box-shadow: 0 0 20px rgba(180, 83, 9, 0.45);
+}
