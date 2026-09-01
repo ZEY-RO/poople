@@ -56,13 +56,26 @@ export const Header: React.FC<HeaderProps> = ({
     };
   }, [checkScroll]);
 
-  // Auto-scroll active mode into view if partially hidden
+  // Auto-scroll active mode into view if partially hidden without negative overscroll
   useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const activeEl = el.querySelector<HTMLElement>('[data-active="true"]');
-    if (activeEl) {
-      activeEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    const container = scrollRef.current;
+    if (!container) return;
+    const activeEl = container.querySelector<HTMLElement>('[data-active="true"]');
+    if (!activeEl) return;
+
+    const cRect = container.getBoundingClientRect();
+    const aRect = activeEl.getBoundingClientRect();
+
+    if (aRect.left < cRect.left) {
+      container.scrollTo({
+        left: Math.max(0, container.scrollLeft + (aRect.left - cRect.left) - 12),
+        behavior: 'smooth'
+      });
+    } else if (aRect.right > cRect.right) {
+      container.scrollTo({
+        left: container.scrollLeft + (aRect.right - cRect.right) + 12,
+        behavior: 'smooth'
+      });
     }
   }, [currentMode]);
 
@@ -188,38 +201,33 @@ export const Header: React.FC<HeaderProps> = ({
         <div
           ref={scrollRef}
           onWheel={handleWheel}
-          className="flex-1 flex items-center overflow-x-auto no-scrollbar scroll-smooth py-1 px-1 sm:px-2 gap-1.5 sm:gap-2 justify-start sm:justify-center touch-pan-x"
+          className="flex-1 overflow-x-auto no-scrollbar scroll-smooth py-1 px-1 touch-pan-x"
         >
-          {modes.map(mode => {
-            const isActive = currentMode === mode.id;
-            return (
-              <button
-                key={mode.id}
-                data-active={isActive ? "true" : "false"}
-                onClick={() => {
-                  if (currentMode !== mode.id) {
-                    soundFx.playKey();
-                    onSelectMode(mode.id);
-                  }
-                }}
-                className={`shrink-0 relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap btn-press select-none ${
-                  isActive
-                    ? 'bg-theme-nav-active text-theme-nav-active shadow-md scale-105 font-black ring-2 ring-amber-500/30'
-                    : 'bg-theme-nav-inactive text-theme-nav-inactive hover:opacity-90'
-                }`}
-              >
-                {mode.icon}
-                <span>{mode.label}</span>
-                {mode.id === 'unlimited' && (
-                  <span className={`text-[9px] px-1 py-0.5 rounded font-black tracking-tight uppercase ${
-                    isActive ? 'bg-amber-500 text-white' : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
-                  }`}>
-                    No Limit
-                  </span>
-                )}
-              </button>
-            );
-          })}
+          <div className="flex items-center gap-1 sm:gap-2 w-max m-auto px-1">
+            {modes.map(mode => {
+              const isActive = currentMode === mode.id;
+              return (
+                <button
+                  key={mode.id}
+                  data-active={isActive ? "true" : "false"}
+                  onClick={() => {
+                    if (currentMode !== mode.id) {
+                      soundFx.playKey();
+                      onSelectMode(mode.id);
+                    }
+                  }}
+                  className={`shrink-0 relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap btn-press select-none ${
+                    isActive
+                      ? 'bg-theme-nav-active text-theme-nav-active shadow-md scale-105 font-black ring-2 ring-amber-500/30'
+                      : 'bg-theme-nav-inactive text-theme-nav-inactive hover:opacity-90'
+                  }`}
+                >
+                  {mode.icon}
+                  <span>{mode.label}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* Right Scroll Chevron */}
