@@ -43,8 +43,8 @@ export const VersusModeView: React.FC<VersusModeViewProps> = ({
               }}
               className={`flex-1 p-2 rounded-xl border text-center transition-all btn-press ${
                 isSelected
-                  ? 'bg-sky-500 text-white border-sky-600 shadow-md scale-105'
-                  : 'bg-white dark:bg-slate-800 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-slate-700 hover:bg-sky-50 dark:hover:bg-slate-700'
+                  ? 'bg-theme-accent text-theme-accent-text border-theme-accent shadow-md scale-105 font-black'
+                  : 'bg-theme-bg-card text-theme-text-secondary border border-theme-border/60 hover:bg-theme-bg-muted'
               }`}
             >
               <div className="text-lg">{cfg.avatar}</div>
@@ -55,11 +55,11 @@ export const VersusModeView: React.FC<VersusModeViewProps> = ({
       </div>
 
       {/* Versus Race Track Card */}
-      <div className="p-3 rounded-2xl bg-sky-500/10 dark:bg-slate-800 border border-sky-300/40 dark:border-slate-700">
+      <div className="p-3 rounded-2xl bg-theme-bg-secondary border border-theme-border shadow-sm">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-1.5">
-            <Swords className="w-4 h-4 text-sky-600 dark:text-sky-400" />
-            <span className="text-xs font-bold text-stone-800 dark:text-stone-200">
+            <Swords className="w-4 h-4 text-theme-accent" />
+            <span className="text-xs font-bold text-theme-text-primary">
               Live Toilet Race to POOP
             </span>
           </div>
@@ -68,7 +68,7 @@ export const VersusModeView: React.FC<VersusModeViewProps> = ({
               soundFx.playFlush();
               onStartNewVersusGame();
             }}
-            className="p-1 rounded-lg bg-white dark:bg-slate-700 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-slate-600 hover:bg-stone-100 dark:hover:bg-slate-600 text-xs font-bold flex items-center gap-1 btn-press"
+            className="p-1 rounded-lg bg-theme-bg-card text-theme-text-secondary border border-theme-border/60 hover:bg-theme-bg-muted text-xs font-bold flex items-center gap-1 btn-press"
             title="Restart match with new word"
           >
             <RotateCcw className="w-3.5 h-3.5" />
@@ -79,12 +79,12 @@ export const VersusModeView: React.FC<VersusModeViewProps> = ({
         {/* Player Race Track */}
         <div className="mb-2">
           <div className="flex justify-between text-[11px] font-bold mb-1">
-            <span className="text-amber-700 dark:text-amber-300">You ({playerStepCount} steps)</span>
-            <span>🏁 POOP</span>
+            <span className="text-theme-accent">You ({playerStepCount} steps)</span>
+            <span className="text-theme-text-muted">🏁 POOP</span>
           </div>
-          <div className="relative w-full h-4 bg-stone-200 dark:bg-slate-700 rounded-full overflow-hidden">
+          <div className="relative w-full h-4 bg-theme-border/40 rounded-full overflow-hidden">
             <div
-              className="h-full bg-amber-500 rounded-full transition-all duration-300"
+              className="h-full bg-theme-accent rounded-full transition-all duration-300"
               style={{ width: `${Math.min(100, Math.max(5, playerProgress))}%` }}
             />
           </div>
@@ -93,23 +93,23 @@ export const VersusModeView: React.FC<VersusModeViewProps> = ({
         {/* Bot Race Track */}
         <div>
           <div className="flex justify-between text-[11px] font-bold mb-1">
-            <span className="text-sky-700 dark:text-sky-300 flex items-center gap-1">
+            <span className="text-theme-text-primary flex items-center gap-1">
               <span>{botState.config.avatar}</span>
               <span>{botState.config.name}</span>
               {botState.status === 'thinking' && (
-                <span className="text-[10px] text-sky-500 animate-pulse">(Thinking...)</span>
+                <span className="text-[10px] text-theme-accent animate-pulse">(Thinking...)</span>
               )}
               {botState.currentWord && (
-                <span className="text-[10px] font-mono font-bold bg-sky-200 dark:bg-sky-900/60 text-sky-900 dark:text-sky-200 px-1.5 py-0.2 rounded">
+                <span className="text-[10px] font-mono font-bold bg-theme-bg-card text-theme-accent border border-theme-border/60 px-1.5 py-0.2 rounded">
                   {botState.currentWord}
                 </span>
               )}
             </span>
-            <span>🏁 POOP</span>
+            <span className="text-theme-text-muted">🏁 POOP</span>
           </div>
-          <div className="relative w-full h-4 bg-stone-200 dark:bg-slate-700 rounded-full overflow-hidden">
+          <div className="relative w-full h-4 bg-theme-border/40 rounded-full overflow-hidden">
             <div
-              className="h-full bg-sky-500 rounded-full transition-all duration-300"
+              className="h-full bg-emerald-500 rounded-full transition-all duration-300"
               style={{ width: `${Math.min(100, Math.max(5, botProgress))}%` }}
             />
           </div>

@@ -106,7 +106,7 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
                 soundFx.playKey();
                 onKeyPress(key);
               }}
-              className="flex-1 max-w-10 h-11 sm:h-12 flex items-center justify-center font-display font-bold text-sm sm:text-base rounded-xl bg-white dark:bg-slate-700 text-stone-800 dark:text-stone-100 shadow-sm border border-stone-300 dark:border-slate-600 hover:bg-amber-100 dark:hover:bg-slate-600 active:scale-95 transition-all btn-press disabled:opacity-50"
+              className="flex-1 max-w-10 h-11 sm:h-12 flex items-center justify-center font-display font-black text-sm sm:text-base rounded-xl bg-theme-key text-theme-key-text shadow-sm border border-theme-key-border hover:bg-theme-key-hover active:scale-95 transition-all btn-press disabled:opacity-50"
             >
               {key}
             </button>
@@ -124,7 +124,7 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
                 soundFx.playKey();
                 onKeyPress(key);
               }}
-              className="flex-1 max-w-10 h-11 sm:h-12 flex items-center justify-center font-display font-bold text-sm sm:text-base rounded-xl bg-white dark:bg-slate-700 text-stone-800 dark:text-stone-100 shadow-sm border border-stone-300 dark:border-slate-600 hover:bg-amber-100 dark:hover:bg-slate-600 active:scale-95 transition-all btn-press disabled:opacity-50"
+              className="flex-1 max-w-10 h-11 sm:h-12 flex items-center justify-center font-display font-black text-sm sm:text-base rounded-xl bg-theme-key text-theme-key-text shadow-sm border border-theme-key-border hover:bg-theme-key-hover active:scale-95 transition-all btn-press disabled:opacity-50"
             >
               {key}
             </button>
@@ -140,7 +140,7 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
               triggerHaptic();
               onSubmit();
             }}
-            className="px-2.5 sm:px-4 h-11 sm:h-12 flex items-center justify-center gap-1 font-display font-bold text-xs sm:text-sm rounded-xl bg-amber-500 hover:bg-amber-600 text-white shadow-md shadow-amber-500/20 active:scale-95 transition-all btn-press disabled:opacity-50"
+            className="px-2.5 sm:px-4 h-11 sm:h-12 flex items-center justify-center gap-1 font-display font-black text-xs sm:text-sm rounded-xl bg-theme-key-special-bg hover:opacity-90 text-theme-key-special-text border border-theme-key-special-border shadow-md active:scale-95 transition-all btn-press disabled:opacity-50"
             title="Submit Word (Enter)"
             aria-label="Submit word"
           >
@@ -157,7 +157,7 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
                 soundFx.playKey();
                 onKeyPress(key);
               }}
-              className="flex-1 max-w-10 h-11 sm:h-12 flex items-center justify-center font-display font-bold text-sm sm:text-base rounded-xl bg-white dark:bg-slate-700 text-stone-800 dark:text-stone-100 shadow-sm border border-stone-300 dark:border-slate-600 hover:bg-amber-100 dark:hover:bg-slate-600 active:scale-95 transition-all btn-press disabled:opacity-50"
+              className="flex-1 max-w-10 h-11 sm:h-12 flex items-center justify-center font-display font-black text-sm sm:text-base rounded-xl bg-theme-key text-theme-key-text shadow-sm border border-theme-key-border hover:bg-theme-key-hover active:scale-95 transition-all btn-press disabled:opacity-50"
             >
               {key}
             </button>
@@ -171,7 +171,7 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
               soundFx.playDelete();
               onDelete();
             }}
-            className="px-2.5 sm:px-4 h-11 sm:h-12 flex items-center justify-center rounded-xl bg-stone-200 dark:bg-slate-600 text-stone-700 dark:text-stone-200 shadow-sm border border-stone-300 dark:border-slate-500 hover:bg-stone-300 dark:hover:bg-slate-500 active:scale-95 transition-all btn-press disabled:opacity-50"
+            className="px-2.5 sm:px-4 h-11 sm:h-12 flex items-center justify-center rounded-xl bg-theme-key-backspace-bg text-theme-key-backspace-text shadow-sm border border-theme-key-backspace-border hover:opacity-90 active:scale-95 transition-all btn-press disabled:opacity-50"
             title="Backspace (Delete)"
             aria-label="Delete letter"
           >

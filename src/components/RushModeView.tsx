@@ -37,33 +37,33 @@ export const RushModeView: React.FC<RushModeViewProps> = ({
     // Game Over Summary for Rush
     return (
       <div className="w-full max-w-md mx-auto px-4 py-3">
-        <div className="p-4 rounded-2xl bg-white dark:bg-slate-800 shadow-xl border border-amber-300 dark:border-slate-700 text-center animate-pop">
+        <div className="p-4 rounded-2xl bg-theme-modal shadow-2xl border border-theme-border text-center animate-pop">
           <div className="text-4xl mb-1">⏱️💨</div>
-          <h2 className="text-xl font-display font-black text-amber-950 dark:text-amber-300">
+          <h2 className="text-xl font-display font-black text-theme-text-primary">
             Time's Up!
           </h2>
-          <p className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
+          <p className="text-xs text-theme-text-muted mt-0.5">
             Great sprint! Here is your final flush report:
           </p>
 
           <div className="grid grid-cols-2 gap-2 mt-4">
-            <div className="p-3 rounded-xl bg-amber-50 dark:bg-slate-700">
-              <span className="text-xs font-bold text-stone-500 dark:text-stone-400 block">Final Score</span>
-              <span className="text-2xl font-display font-black text-amber-600 dark:text-amber-400">
+            <div className="p-3 rounded-xl bg-theme-modal-subcard border border-theme-modal-subcard-border">
+              <span className="text-xs font-bold text-theme-text-muted block">Final Score</span>
+              <span className="text-2xl font-display font-black text-theme-accent">
                 {score}
               </span>
             </div>
-            <div className="p-3 rounded-xl bg-amber-50 dark:bg-slate-700">
-              <span className="text-xs font-bold text-stone-500 dark:text-stone-400 block">Words Solved</span>
-              <span className="text-2xl font-display font-black text-amber-600 dark:text-amber-400">
+            <div className="p-3 rounded-xl bg-theme-modal-subcard border border-theme-modal-subcard-border">
+              <span className="text-xs font-bold text-theme-text-muted block">Words Solved</span>
+              <span className="text-2xl font-display font-black text-theme-accent">
                 {wordsSolved}
               </span>
             </div>
           </div>
 
           {score >= highScore && score > 0 && (
-            <div className="mt-3 py-1.5 px-3 rounded-xl bg-amber-400/20 text-amber-900 dark:text-amber-300 text-xs font-black flex items-center justify-center gap-1">
-              <Trophy className="w-4 h-4 text-amber-500" />
+            <div className="mt-3 py-1.5 px-3 rounded-xl bg-theme-accent/15 border border-theme-accent/30 text-theme-text-primary text-xs font-black flex items-center justify-center gap-1">
+              <Trophy className="w-4 h-4 text-theme-accent" />
               NEW HIGH SCORE!
             </div>
           )}
@@ -73,7 +73,7 @@ export const RushModeView: React.FC<RushModeViewProps> = ({
               soundFx.playFlush();
               onStartRush();
             }}
-            className="mt-4 w-full py-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-display font-bold text-sm shadow-md shadow-amber-500/30 flex items-center justify-center gap-2 btn-press"
+            className="mt-4 w-full py-3 rounded-xl bg-theme-accent hover:bg-theme-accent-hover text-theme-accent-text font-display font-black text-sm shadow-md flex items-center justify-center gap-2 btn-press"
           >
             <RotateCcw className="w-4 h-4" />
             Play Rush Again
@@ -86,23 +86,23 @@ export const RushModeView: React.FC<RushModeViewProps> = ({
   return (
     <div className="w-full max-w-md mx-auto px-4 pt-1 pb-2">
       {/* Rush Header Card */}
-      <div className="px-3 py-2 rounded-2xl bg-amber-500/10 dark:bg-slate-800 border border-amber-300/40 dark:border-slate-700">
+      <div className="px-3 py-2 rounded-2xl bg-theme-bg-secondary border border-theme-border shadow-sm">
         <div className="flex items-center justify-between">
           {/* Left: Timer */}
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-amber-500 text-white shadow-sm">
+            <div className="p-2 rounded-xl bg-theme-accent text-theme-accent-text shadow-sm">
               <Zap className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
-                <Clock className="w-3.5 h-3.5 text-stone-500 dark:text-stone-400" />
+                <Clock className="w-3.5 h-3.5 text-theme-text-muted" />
                 <span className={`text-base font-display font-black ${
-                  timeLeft <= 15 ? 'text-rose-600 dark:text-rose-400 animate-pulse' : 'text-amber-950 dark:text-amber-300'
+                  timeLeft <= 15 ? 'text-rose-500 animate-pulse' : 'text-theme-text-primary'
                 }`}>
                   {timeLeft}s
                 </span>
               </div>
-              <span className="text-[10px] font-bold text-stone-400">
+              <span className="text-[10px] font-bold text-theme-text-muted">
                 Solved: {wordsSolved}
               </span>
             </div>
@@ -111,16 +111,16 @@ export const RushModeView: React.FC<RushModeViewProps> = ({
           {/* Right: Score and Combo */}
           <div className="text-right flex items-center gap-3">
             {combo > 1 && (
-              <div className="flex items-center gap-0.5 text-xs font-black text-amber-500 animate-bounceShort">
+              <div className="flex items-center gap-0.5 text-xs font-black text-theme-accent animate-bounceShort">
                 <Flame className="w-3.5 h-3.5" />
                 <span>{combo}x</span>
               </div>
             )}
             <div>
-              <div className="text-lg font-display font-black text-amber-600 dark:text-amber-400">
+              <div className="text-lg font-display font-black text-theme-accent">
                 {score} pts
               </div>
-              <div className="text-[10px] font-bold text-stone-400">
+              <div className="text-[10px] font-bold text-theme-text-muted">
                 Best: {highScore}
               </div>
             </div>
@@ -131,7 +131,7 @@ export const RushModeView: React.FC<RushModeViewProps> = ({
                   soundFx.playKey();
                   onSkipWord();
                 }}
-                className="p-1.5 rounded-xl bg-stone-200 dark:bg-slate-700 text-stone-600 dark:text-stone-300 hover:bg-stone-300 dark:hover:bg-slate-600 text-xs font-bold flex items-center gap-0.5 btn-press"
+                className="p-1.5 rounded-xl bg-theme-bg-card text-theme-text-secondary border border-theme-border/60 hover:bg-theme-bg-muted text-xs font-bold flex items-center gap-0.5 btn-press"
                 title="Skip word (-5s)"
               >
                 <FastForward className="w-3.5 h-3.5" />
@@ -141,7 +141,7 @@ export const RushModeView: React.FC<RushModeViewProps> = ({
         </div>
 
         {/* Progress Bar */}
-        <div className="w-full h-2 mt-2 bg-stone-200 dark:bg-slate-700 rounded-full overflow-hidden">
+        <div className="w-full h-2 mt-2 bg-theme-border/40 rounded-full overflow-hidden">
           <div
             className={`h-full transition-all duration-300 rounded-full ${getTimerColor()}`}
             style={{ width: `${percentLeft}%` }}

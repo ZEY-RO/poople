@@ -33,14 +33,14 @@ export const Header: React.FC<HeaderProps> = ({
   ];
 
   return (
-    <header className="w-full max-w-2xl mx-auto px-4 py-3 border-b border-amber-200/40 dark:border-slate-700">
+    <header className="w-full max-w-2xl mx-auto px-4 py-3 border-b border-theme-border/60">
       {/* Top bar with title and action buttons */}
       <div className="flex items-center justify-between">
         {/* Left: Help / Tutorial */}
         <div className="flex items-center space-x-1 sm:space-x-2">
           <button
             onClick={() => { soundFx.playKey(); onOpenTutorial(); }}
-            className="p-2 rounded-xl text-stone-600 dark:text-stone-300 hover:bg-amber-100/60 dark:hover:bg-slate-800 transition-colors btn-press"
+            className="p-2 rounded-xl text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-secondary transition-colors btn-press"
             title="How to Play & Tutorial"
             aria-label="How to play"
           >
@@ -48,10 +48,10 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
           <button
             onClick={() => { soundFx.playKey(); onOpenCustom(); }}
-            className="p-2 rounded-xl text-stone-600 dark:text-stone-300 hover:bg-amber-100/60 dark:hover:bg-slate-800 transition-colors btn-press hidden sm:flex items-center gap-1 text-xs font-semibold"
+            className="p-2 rounded-xl text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-secondary transition-colors btn-press hidden sm:flex items-center gap-1 text-xs font-semibold"
             title="Custom Puzzle Builder"
           >
-            <PlusCircle className="w-5 h-5 text-amber-600 dark:text-amber-400" />
+            <PlusCircle className="w-5 h-5 text-theme-accent" />
             <span className="hidden md:inline">Custom</span>
           </button>
         </div>
@@ -59,19 +59,36 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Center: Logo and Brand */}
         <div 
           onClick={() => { soundFx.playDuckSqueak(); }}
-          className="flex items-center space-x-2 cursor-pointer group select-none"
-          title="Squeeze the duck!"
+          className="flex items-center space-x-2.5 cursor-pointer group select-none shrink-0"
+          title="Squeeze for fun!"
         >
-          <span className="text-3xl sm:text-4xl animate-bounceShort group-hover:scale-125 transition-transform inline-block">
-            💩
-          </span>
-          <div className="text-center">
-            <h1 className="text-2xl sm:text-3xl font-display font-black tracking-wider text-amber-900 dark:text-amber-300 flex items-center justify-center gap-1">
-              POOPLE
-              <Sparkles className="w-4 h-4 text-amber-500 animate-spin" style={{ animationDuration: '8s' }} />
-            </h1>
-            <p className="text-[10px] sm:text-xs font-bold tracking-widest text-amber-700/80 dark:text-amber-400 uppercase">
-              Word Ladder to POOP
+          <div className="relative flex items-center justify-center shrink-0">
+            <img 
+              src="/logo.png" 
+              alt="Poople - Play Unlimited Word Ladder Game Logo" 
+              className="w-10 h-10 sm:w-11 sm:h-11 shrink-0 rounded-2xl shadow-md group-hover:scale-110 group-hover:rotate-6 transition-all duration-300 object-cover border border-amber-500/20"
+              onError={(e) => {
+                e.currentTarget.style.display = 'none';
+                const next = e.currentTarget.nextElementSibling as HTMLElement;
+                if (next) next.style.display = 'inline-block';
+              }}
+            />
+            <span className="text-3xl sm:text-4xl animate-bounceShort group-hover:scale-125 transition-transform hidden">
+              💩
+            </span>
+          </div>
+          <div className="text-left">
+            <div className="flex items-center gap-1.5">
+              <h1 className="text-2xl sm:text-3xl font-display font-black tracking-wider text-theme-text-primary flex items-center gap-1">
+                POOPLE
+                <Sparkles className="w-4 h-4 text-theme-accent animate-spin" style={{ animationDuration: '8s' }} />
+              </h1>
+              <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-gradient-to-r from-amber-500 to-yellow-500 text-white shadow-sm">
+                Unlimited
+              </span>
+            </div>
+            <p className="text-[10px] sm:text-xs font-bold tracking-widest text-theme-text-muted uppercase">
+              Play Unlimited Word Ladder
             </p>
           </div>
         </div>
@@ -80,15 +97,15 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center space-x-1 sm:space-x-2">
           <button
             onClick={() => { soundFx.playKey(); onToggleSound(); }}
-            className="p-2 rounded-xl text-stone-600 dark:text-stone-300 hover:bg-amber-100/60 dark:hover:bg-slate-800 transition-colors btn-press"
+            className="p-2 rounded-xl text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-secondary transition-colors btn-press"
             title={soundEnabled ? "Mute Sounds" : "Enable Sounds"}
             aria-label="Sound toggle"
           >
-            {soundEnabled ? <Volume2 className="w-5 h-5 sm:w-6 sm:h-6 text-amber-600 dark:text-amber-400" /> : <VolumeX className="w-5 h-5 sm:w-6 sm:h-6 text-stone-400" />}
+            {soundEnabled ? <Volume2 className="w-5 h-5 sm:w-6 sm:h-6 text-theme-accent" /> : <VolumeX className="w-5 h-5 sm:w-6 sm:h-6 opacity-40" />}
           </button>
           <button
             onClick={() => { soundFx.playKey(); onOpenStats(); }}
-            className="p-2 rounded-xl text-stone-600 dark:text-stone-300 hover:bg-amber-100/60 dark:hover:bg-slate-800 transition-colors btn-press"
+            className="p-2 rounded-xl text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-secondary transition-colors btn-press"
             title="Statistics & Streaks"
             aria-label="Statistics"
           >
@@ -96,7 +113,7 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
           <button
             onClick={() => { soundFx.playKey(); onOpenSettings(); }}
-            className="p-2 rounded-xl text-stone-600 dark:text-stone-300 hover:bg-amber-100/60 dark:hover:bg-slate-800 transition-colors btn-press"
+            className="p-2 rounded-xl text-theme-text-secondary hover:text-theme-text-primary hover:bg-theme-bg-secondary transition-colors btn-press"
             title="Themes & Settings"
             aria-label="Settings"
           >
@@ -118,14 +135,21 @@ export const Header: React.FC<HeaderProps> = ({
                   onSelectMode(mode.id);
                 }
               }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap btn-press ${
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap btn-press ${
                 isActive
-                  ? 'bg-amber-500 text-white shadow-md shadow-amber-500/30 scale-105'
-                  : 'bg-amber-100/80 dark:bg-slate-800 text-stone-700 dark:text-stone-300 hover:bg-amber-200/80 dark:hover:bg-slate-700'
+                  ? 'bg-theme-nav-active text-theme-nav-active shadow-md scale-105 font-black ring-2 ring-amber-500/30'
+                  : 'bg-theme-nav-inactive text-theme-nav-inactive hover:opacity-90'
               }`}
             >
               {mode.icon}
               <span>{mode.label}</span>
+              {mode.id === 'unlimited' && (
+                <span className={`text-[9px] px-1 py-0.5 rounded font-black tracking-tight uppercase ${
+                  isActive ? 'bg-amber-500 text-white' : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                }`}>
+                  No Limit
+                </span>
+              )}
             </button>
           );
         })}

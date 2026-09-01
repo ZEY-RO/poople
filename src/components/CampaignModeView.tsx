@@ -41,25 +41,25 @@ export const CampaignModeView: React.FC<CampaignModeViewProps> = ({
   return (
     <div className="w-full max-w-md mx-auto px-4 py-2">
       {/* Campaign Header Summary */}
-      <div className="p-3 rounded-2xl bg-amber-500/15 dark:bg-slate-800 border border-amber-300/60 dark:border-slate-700 flex items-center justify-between mb-3">
+      <div className="p-3 rounded-2xl bg-theme-bg-secondary border border-theme-border shadow-sm flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-amber-500 text-white shadow-sm">
+          <div className="p-2 rounded-xl bg-theme-accent text-theme-accent-text shadow-sm">
             <Trophy className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-sm sm:text-base font-display font-black text-amber-950 dark:text-amber-300">
+            <h2 className="text-sm sm:text-base font-display font-black text-theme-text-primary">
               The Gauntlet (50 Stages)
             </h2>
-            <p className="text-[11px] font-semibold text-stone-500 dark:text-stone-400">
+            <p className="text-[11px] font-semibold text-theme-text-muted">
               Earn 3 stars per stage by matching Par!
             </p>
           </div>
         </div>
 
         {/* Stars Tally Badge */}
-        <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-amber-400/30 dark:bg-amber-950/60 border border-amber-400/50">
-          <Star className="w-4 h-4 text-amber-500 fill-amber-400" />
-          <span className="font-display font-black text-xs text-amber-950 dark:text-amber-200">
+        <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-theme-accent/15 border border-theme-accent/30">
+          <Star className="w-4 h-4 text-theme-accent fill-theme-accent" />
+          <span className="font-display font-black text-xs text-theme-text-primary">
             {totalStars} / {maxPossibleStars}
           </span>
         </div>
@@ -78,8 +78,8 @@ export const CampaignModeView: React.FC<CampaignModeViewProps> = ({
               }}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all btn-press ${
                 isSelected
-                  ? 'bg-amber-500 text-white shadow-sm'
-                  : 'bg-white dark:bg-slate-800 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-slate-700 hover:bg-amber-50'
+                  ? 'bg-theme-accent text-theme-accent-text font-black shadow-sm'
+                  : 'bg-theme-bg-card text-theme-text-secondary border border-theme-border/60 hover:bg-theme-bg-muted'
               }`}
             >
               Ch. {c.num}
@@ -89,7 +89,7 @@ export const CampaignModeView: React.FC<CampaignModeViewProps> = ({
       </div>
 
       {/* Chapter Title */}
-      <div className="text-xs font-bold text-stone-600 dark:text-stone-300 mb-2 px-1">
+      <div className="text-xs font-bold text-theme-text-primary mb-2 px-1">
         {currentChapterObj.title}
       </div>
 
@@ -110,10 +110,10 @@ export const CampaignModeView: React.FC<CampaignModeViewProps> = ({
               }}
               className={`p-3 rounded-2xl border text-left transition-all btn-press relative overflow-hidden ${
                 !unlocked
-                  ? 'bg-stone-100/70 dark:bg-slate-800/40 border-stone-200 dark:border-slate-800 opacity-60 cursor-not-allowed'
+                  ? 'bg-theme-bg-secondary/40 border-theme-border/40 opacity-50 cursor-not-allowed'
                   : isCurrent
-                  ? 'bg-amber-400 text-amber-950 border-amber-500 shadow-md scale-102'
-                  : 'bg-white dark:bg-slate-800 text-stone-800 dark:text-stone-100 border-stone-200 dark:border-slate-700 hover:border-amber-400 hover:bg-amber-50/50 dark:hover:bg-slate-700'
+                  ? 'bg-theme-accent text-theme-accent-text border-theme-accent shadow-md scale-102 font-black'
+                  : 'bg-theme-bg-card text-theme-text-primary border border-theme-border/60 hover:border-theme-accent hover:bg-theme-bg-muted'
               }`}
             >
               <div className="flex items-center justify-between">
@@ -121,7 +121,7 @@ export const CampaignModeView: React.FC<CampaignModeViewProps> = ({
                   Stage {stage.id}
                 </span>
                 {!unlocked ? (
-                  <Lock className="w-3.5 h-3.5 text-stone-400" />
+                  <Lock className="w-3.5 h-3.5 opacity-40" />
                 ) : (
                   <div className="flex gap-0.5">
                     {[1, 2, 3].map(sIdx => (
@@ -129,8 +129,8 @@ export const CampaignModeView: React.FC<CampaignModeViewProps> = ({
                         key={sIdx}
                         className={`w-3 h-3 ${
                           sIdx <= stars
-                            ? 'text-amber-500 fill-amber-400'
-                            : 'text-stone-300 dark:text-slate-600'
+                            ? 'text-theme-accent fill-theme-accent'
+                            : 'opacity-20'
                         }`}
                       />
                     ))}
@@ -143,7 +143,7 @@ export const CampaignModeView: React.FC<CampaignModeViewProps> = ({
               </div>
 
               <div className="flex items-center justify-between mt-2 text-[10px] font-semibold">
-                <span className="font-mono bg-amber-100 dark:bg-slate-700 px-1.5 py-0.5 rounded text-amber-900 dark:text-amber-300">
+                <span className="font-mono bg-theme-bg-secondary text-theme-accent px-1.5 py-0.5 rounded border border-theme-border/50">
                   {stage.startWord} ➔ {stage.targetWord}
                 </span>
                 <span className="opacity-75">Par: {stage.par}</span>

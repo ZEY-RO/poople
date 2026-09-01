@@ -53,11 +53,11 @@ export const CustomPuzzleModal: React.FC<CustomPuzzleModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-pop">
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-stone-200 dark:border-slate-700 overflow-hidden flex flex-col">
+      <div className="w-full max-w-md bg-theme-modal text-theme-text-primary rounded-3xl shadow-2xl border border-theme-border overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="p-4 border-b border-stone-200 dark:border-slate-800 flex items-center justify-between">
-          <h2 className="text-lg font-display font-black text-amber-950 dark:text-amber-300 flex items-center gap-2">
-            <PlusCircle className="w-5 h-5 text-amber-500" />
+        <div className="p-4 border-b border-theme-border/60 flex items-center justify-between">
+          <h2 className="text-lg font-display font-black text-theme-text-primary flex items-center gap-2">
+            <PlusCircle className="w-5 h-5 text-theme-accent" />
             Custom Puzzle Builder
           </h2>
           <button
@@ -65,7 +65,7 @@ export const CustomPuzzleModal: React.FC<CustomPuzzleModalProps> = ({
               soundFx.playKey();
               onClose();
             }}
-            className="p-1 rounded-xl text-stone-400 hover:text-stone-700 dark:hover:text-stone-200 hover:bg-stone-100 dark:hover:bg-slate-800 btn-press"
+            className="p-1 rounded-xl text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-secondary btn-press"
           >
             <X className="w-5 h-5" />
           </button>
@@ -74,7 +74,7 @@ export const CustomPuzzleModal: React.FC<CustomPuzzleModalProps> = ({
         {/* Form Body */}
         <div className="p-5 space-y-4">
           <div>
-            <label className="text-xs font-bold text-stone-700 dark:text-stone-300 block mb-1">
+            <label className="text-xs font-bold text-theme-text-primary block mb-1">
               Starting Word (4 Letters)
             </label>
             <input
@@ -83,7 +83,7 @@ export const CustomPuzzleModal: React.FC<CustomPuzzleModalProps> = ({
               value={startWord}
               onChange={e => setStartWord(e.target.value.toUpperCase())}
               placeholder="e.g. CHAT"
-              className="w-full px-4 py-2.5 rounded-xl border border-stone-300 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 font-mono font-black text-lg text-center tracking-widest uppercase focus:ring-2 focus:ring-amber-500 outline-none"
+              className="w-full px-4 py-2.5 rounded-xl border border-theme-border bg-theme-bg-secondary text-theme-text-primary font-mono font-black text-lg text-center tracking-widest uppercase focus:ring-2 focus:ring-theme-accent outline-none"
             />
             {!isStartValid && cleanStart.length === 4 && (
               <span className="text-[11px] text-rose-500 font-semibold mt-1 block">
@@ -93,7 +93,7 @@ export const CustomPuzzleModal: React.FC<CustomPuzzleModalProps> = ({
           </div>
 
           <div>
-            <label className="text-xs font-bold text-stone-700 dark:text-stone-300 block mb-1">
+            <label className="text-xs font-bold text-theme-text-primary block mb-1">
               Target Word (Default: POOP)
             </label>
             <input
@@ -102,7 +102,7 @@ export const CustomPuzzleModal: React.FC<CustomPuzzleModalProps> = ({
               value={targetWord}
               onChange={e => setTargetWord(e.target.value.toUpperCase())}
               placeholder="e.g. POOP"
-              className="w-full px-4 py-2.5 rounded-xl border border-stone-300 dark:border-slate-700 bg-stone-50 dark:bg-slate-800 font-mono font-black text-lg text-center tracking-widest uppercase focus:ring-2 focus:ring-amber-500 outline-none"
+              className="w-full px-4 py-2.5 rounded-xl border border-theme-border bg-theme-bg-secondary text-theme-text-primary font-mono font-black text-lg text-center tracking-widest uppercase focus:ring-2 focus:ring-theme-accent outline-none"
             />
             {!isTargetValid && cleanTarget.length === 4 && (
               <span className="text-[11px] text-rose-500 font-semibold mt-1 block">
@@ -112,14 +112,14 @@ export const CustomPuzzleModal: React.FC<CustomPuzzleModalProps> = ({
           </div>
 
           {/* Solvability Preview Card */}
-          <div className="p-3 rounded-2xl bg-stone-50 dark:bg-slate-800 border border-stone-200 dark:border-slate-700 text-center">
+          <div className="p-3 rounded-2xl bg-theme-modal-subcard border border-theme-modal-subcard-border text-center">
             {path ? (
               <div>
-                <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center justify-center gap-1">
+                <div className="text-xs font-bold text-emerald-500 flex items-center justify-center gap-1">
                   <Sparkles className="w-4 h-4" />
                   Solvable in {par} Steps (Par: {par})
                 </div>
-                <div className="text-[11px] font-mono text-stone-500 mt-1 truncate">
+                <div className="text-[11px] font-mono text-theme-text-muted mt-1 truncate">
                   Optimal: {path.join(' ➔ ')}
                 </div>
               </div>
@@ -133,20 +133,20 @@ export const CustomPuzzleModal: React.FC<CustomPuzzleModalProps> = ({
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 bg-stone-50 dark:bg-slate-800/80 border-t border-stone-200 dark:border-slate-700 flex gap-2">
+        <div className="p-4 bg-theme-modal-subcard border-t border-theme-border/60 flex gap-2">
           <button
             disabled={!path}
             onClick={handleCopyLink}
-            className="flex-1 py-3 px-3 rounded-2xl bg-stone-200 dark:bg-slate-700 text-stone-800 dark:text-stone-200 font-bold text-xs flex items-center justify-center gap-1.5 btn-press disabled:opacity-40"
+            className="flex-1 py-3 px-3 rounded-2xl bg-theme-bg-card text-theme-text-secondary border border-theme-border/60 hover:bg-theme-bg-secondary font-bold text-xs flex items-center justify-center gap-1.5 btn-press disabled:opacity-40"
           >
-            {copied ? <Check className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+            {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
             <span>{copied ? 'Link Copied!' : 'Share Link'}</span>
           </button>
 
           <button
             disabled={!path}
             onClick={handlePlay}
-            className="flex-1 py-3 px-4 rounded-2xl bg-amber-500 hover:bg-amber-600 text-white font-display font-bold text-sm shadow-md shadow-amber-500/30 flex items-center justify-center gap-1.5 btn-press disabled:opacity-40"
+            className="flex-1 py-3 px-4 rounded-2xl bg-theme-accent hover:bg-theme-accent-hover text-theme-accent-text font-display font-black text-sm shadow-md flex items-center justify-center gap-1.5 btn-press disabled:opacity-40"
           >
             <Play className="w-4 h-4" />
             <span>Play Now</span>

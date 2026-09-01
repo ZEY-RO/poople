@@ -8,6 +8,88 @@ export default {
   theme: {
     extend: {
       colors: {
+        theme: {
+          bg: {
+            primary: 'var(--bg-primary)',
+            secondary: 'var(--bg-secondary)',
+            card: 'var(--bg-card)',
+            muted: 'var(--bg-card-muted)',
+          },
+          text: {
+            primary: 'var(--text-primary)',
+            secondary: 'var(--text-secondary)',
+            muted: 'var(--text-muted)',
+          },
+          accent: {
+            DEFAULT: 'var(--accent)',
+            hover: 'var(--accent-hover)',
+            light: 'var(--accent-light)',
+            text: 'var(--accent-text)',
+          },
+          border: {
+            DEFAULT: 'var(--border-color)',
+            subtle: 'var(--border-subtle)',
+          },
+          tile: {
+            start: {
+              bg: 'var(--tile-start-bg)',
+              text: 'var(--tile-start-text)',
+              border: 'var(--tile-start-border)',
+            },
+            empty: {
+              DEFAULT: 'var(--tile-empty)',
+              text: 'var(--tile-empty-text)',
+              border: 'var(--tile-border)',
+            },
+            active: {
+              bg: 'var(--tile-active-bg)',
+              border: 'var(--tile-active-border)',
+              text: 'var(--tile-active-text)',
+            },
+            diff: {
+              bg: 'var(--tile-diff-bg)',
+              border: 'var(--tile-diff-border)',
+              text: 'var(--tile-diff-text)',
+            },
+            correct: {
+              bg: 'var(--tile-correct-bg)',
+              border: 'var(--tile-correct-border)',
+              text: 'var(--tile-correct-text)',
+            },
+          },
+          key: {
+            DEFAULT: 'var(--key-bg)',
+            text: 'var(--key-text)',
+            border: 'var(--key-border)',
+            hover: 'var(--key-hover)',
+            special: {
+              bg: 'var(--key-special-bg)',
+              text: 'var(--key-special-text)',
+              border: 'var(--key-special-border)',
+            },
+            backspace: {
+              bg: 'var(--key-backspace-bg)',
+              text: 'var(--key-backspace-text)',
+              border: 'var(--key-backspace-border)',
+            },
+          },
+          nav: {
+            active: {
+              bg: 'var(--nav-active-bg)',
+              text: 'var(--nav-active-text)',
+            },
+            inactive: {
+              bg: 'var(--nav-inactive-bg)',
+              text: 'var(--nav-inactive-text)',
+            },
+          },
+          modal: {
+            DEFAULT: 'var(--modal-bg)',
+            border: 'var(--modal-border)',
+            subcard: 'var(--modal-subcard)',
+            'subcard-border': 'var(--modal-subcard-border)',
+          }
+        },
         poop: {
           50: '#fdf8f4',
           100: '#f9eee4',

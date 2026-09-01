@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GameMode, Difficulty, Step, BotPersonality, BotState, CampaignStage } from './types/game';
 import { loadSettings, saveSettings, loadStats, recordDailyCompletion, saveCampaignStars, saveStats } from './services/storage';
 import { soundFx } from './services/audio';
+import { applyTheme } from './services/theme';
 import { isValidStep, findShortestPath, getPar, getRandomPuzzle, isDeadEnd } from './engine/solver';
 import { getDailyPuzzle, formatDateToKey } from './engine/daily';
 import { BOT_CONFIGS, getNextBotMove, getRandomThinkDelay } from './engine/bot';
@@ -79,31 +80,11 @@ export const App: React.FC = () => {
 
   // Initialize theme class and audio config
   useEffect(() => {
-    document.documentElement.className = settings.theme === 'classic' ? '' : `theme-${settings.theme}`;
+    applyTheme(settings.theme);
     soundFx.setConfig(settings.soundEnabled, settings.soundVolume, settings.soundProfile);
   }, [settings]);
 
-  // Read URL params for custom puzzle on initial load
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const s = params.get('start');
-    const t = params.get('target');
-    if (s && t) {
-      const cleanS = s.toUpperCase().trim();
-      const cleanT = t.toUpperCase().trim();
-      const path = findShortestPath(cleanS, cleanT);
-      if (path && path.length > 1) {
-        setMode('custom');
-        setStartWord(cleanS);
-        setTargetWord(cleanT);
-        setPar(path.length - 1);
-        setOptimalPath(path);
-        setHistory([]);
-        setStatus('playing');
-        return;
-      }
-    }
-  }, []);
+
 
   // Initialize game when mode or parameters change
   const startNewGame = useCallback((
@@ -181,14 +162,67 @@ export const App: React.FC = () => {
     }
   }, [mode, difficulty, selectedBot, currentCampaignStage, startWord, targetWord]);
 
-  // Initial load
+  // Initial load - Support mode=unlimited, custom puzzles, and daily default
   useEffect(() => {
-    startNewGame('daily');
+    const params = new URLSearchParams(window.location.search);
+    const modeParam = params.get('mode') as GameMode | null;
+    const s = params.get('start');
+    const t = params.get('target');
+
+    if (s && t) {
+      const cleanS = s.toUpperCase().trim();
+      const cleanT = t.toUpperCase().trim();
+      const path = findShortestPath(cleanS, cleanT);
+      if (path && path.length > 1) {
+        setMode('custom');
+        setStartWord(cleanS);
+        setTargetWord(cleanT);
+        setPar(path.length - 1);
+        setOptimalPath(path);
+        setHistory([]);
+        setStatus('playing');
+        return;
+      }
+    }
+
+    if (modeParam && ['daily', 'unlimited', 'rush', 'versus', 'campaign'].includes(modeParam)) {
+      setMode(modeParam);
+      if (modeParam === 'campaign') {
+        setIsViewingCampaignMap(true);
+      } else if (modeParam === 'rush') {
+        setRushTimeLeft(120);
+        setRushScore(0);
+        setRushCombo(1);
+        setRushSolvedCount(0);
+        setIsRushPlaying(true);
+        startNewGame('rush');
+      } else {
+        startNewGame(modeParam);
+      }
+    } else {
+      startNewGame('daily');
+    }
   }, []);
 
   // Handle Mode Change
   const handleSelectMode = (newMode: GameMode) => {
     setMode(newMode);
+
+    // Sync URL without reload so players can share or bookmark their current mode (e.g. ?mode=unlimited)
+    try {
+      const url = new URL(window.location.href);
+      if (newMode === 'daily') {
+        url.searchParams.delete('mode');
+      } else {
+        url.searchParams.set('mode', newMode);
+      }
+      url.searchParams.delete('start');
+      url.searchParams.delete('target');
+      window.history.replaceState({}, '', url.toString());
+    } catch {
+      // Ignore in non-browser environments
+    }
+
     if (newMode === 'campaign') {
       setIsViewingCampaignMap(true);
     } else if (newMode === 'rush') {
@@ -463,7 +497,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between max-w-lg mx-auto bg-amber-50/60 dark:bg-slate-900 border-x border-amber-200/40 dark:border-slate-800 shadow-2xl transition-colors">
+    <div className="min-h-screen flex flex-col justify-between max-w-lg mx-auto bg-theme-bg-primary text-theme-text-primary border-x border-theme-border/60 shadow-2xl transition-colors">
       {/* Top Navigation Header */}
       <Header
         currentMode={mode}
@@ -498,8 +532,8 @@ export const App: React.FC = () => {
 
         {mode === 'unlimited' && (
           <div className="w-full max-w-md mx-auto px-4 pt-1 pb-2">
-            <div className="flex items-center justify-between px-3 py-2 rounded-2xl bg-amber-500/10 dark:bg-slate-800 border border-amber-300/40 dark:border-slate-700">
-              <span className="text-xs font-bold text-stone-700 dark:text-stone-300">
+            <div className="flex items-center justify-between px-3 py-2 rounded-2xl bg-theme-bg-secondary border border-theme-border">
+              <span className="text-xs font-bold text-theme-text-primary">
                 Difficulty:
               </span>
               <div className="flex gap-1">
@@ -513,8 +547,8 @@ export const App: React.FC = () => {
                     }}
                     className={`px-2.5 py-1 rounded-xl text-[11px] font-bold capitalize transition-all btn-press ${
                       difficulty === d
-                        ? 'bg-amber-500 text-white shadow-sm scale-105'
-                        : 'bg-white dark:bg-slate-700 text-stone-600 dark:text-stone-300 border border-stone-200 dark:border-slate-600 hover:bg-amber-50'
+                        ? 'bg-theme-accent text-theme-accent-text shadow-sm scale-105 font-black'
+                        : 'bg-theme-bg-card text-theme-text-secondary border border-theme-border/60 hover:bg-theme-bg-muted'
                     }`}
                   >
                     {d}
@@ -567,13 +601,13 @@ export const App: React.FC = () => {
 
         {mode === 'custom' && (
           <div className="w-full max-w-md mx-auto px-4 pt-1 pb-2">
-            <div className="flex items-center justify-between px-3 py-2 rounded-2xl bg-purple-500/10 dark:bg-slate-800 border border-purple-300/40 dark:border-slate-700">
-              <span className="text-xs font-bold text-purple-900 dark:text-purple-300">
+            <div className="flex items-center justify-between px-3 py-2 rounded-2xl bg-theme-bg-secondary border border-theme-border">
+              <span className="text-xs font-bold text-theme-text-primary">
                 Custom Puzzle: {startWord} ➔ {targetWord}
               </span>
               <button
                 onClick={() => setIsCustomModalOpen(true)}
-                className="px-2.5 py-1 rounded-xl bg-purple-500 text-white text-[11px] font-bold shadow-sm btn-press"
+                className="px-2.5 py-1 rounded-xl bg-theme-accent hover:bg-theme-accent-hover text-theme-accent-text text-[11px] font-bold shadow-sm btn-press"
               >
                 Edit
               </button>
@@ -629,7 +663,7 @@ export const App: React.FC = () => {
 
       {/* Virtual On-Screen Keyboard */}
       {(!isViewingCampaignMap || mode !== 'campaign') && (
-        <footer className="pb-2 bg-amber-100/30 dark:bg-slate-900/60 border-t border-amber-200/30 dark:border-slate-800">
+        <footer className="pb-2 bg-theme-bg-secondary/40 border-t border-theme-border/50">
           <VirtualKeyboard
             layout={settings.keyboardLayout}
             onKeyPress={handleKeyPress}

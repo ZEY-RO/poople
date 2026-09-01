@@ -35,17 +35,17 @@ export const DailyModeView: React.FC<DailyModeViewProps> = ({
   return (
     <div className="w-full max-w-md mx-auto px-4 pt-1 pb-2">
       {/* Daily Banner Card */}
-      <div className="flex items-center justify-between px-3 py-2 rounded-2xl bg-amber-500/10 dark:bg-slate-800 border border-amber-300/40 dark:border-slate-700">
+      <div className="flex items-center justify-between px-3 py-2 rounded-2xl bg-theme-bg-secondary border border-theme-border shadow-sm">
         {/* Left: Day & Date */}
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-amber-500 text-white shadow-sm">
+          <div className="p-2 rounded-xl bg-theme-accent text-theme-accent-text shadow-sm">
             <Calendar className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-sm sm:text-base font-display font-black text-amber-950 dark:text-amber-300">
+            <h2 className="text-sm sm:text-base font-display font-black text-theme-text-primary">
               Daily Poople #{dayNumber}
             </h2>
-            <p className="text-[11px] font-semibold text-stone-500 dark:text-stone-400">
+            <p className="text-[11px] font-semibold text-theme-text-muted">
               {dateKey}
             </p>
           </div>
@@ -55,8 +55,8 @@ export const DailyModeView: React.FC<DailyModeViewProps> = ({
         <div className="flex items-center gap-3">
           {/* Streak Counter */}
           <div className="flex items-center gap-1" title={`Current Streak: ${currentStreak} (Max: ${maxStreak})`}>
-            <Flame className={`w-5 h-5 ${currentStreak > 0 ? 'text-amber-500 animate-bounceShort' : 'text-stone-400'}`} />
-            <span className="font-display font-black text-sm text-amber-900 dark:text-amber-200">
+            <Flame className={`w-5 h-5 ${currentStreak > 0 ? 'text-theme-accent animate-bounceShort' : 'opacity-40'}`} />
+            <span className="font-display font-black text-sm text-theme-text-primary">
               {currentStreak}
             </span>
           </div>
@@ -67,7 +67,7 @@ export const DailyModeView: React.FC<DailyModeViewProps> = ({
               soundFx.playKey();
               setShowArchive(!showArchive);
             }}
-            className="p-1.5 rounded-xl bg-white dark:bg-slate-700 text-stone-700 dark:text-stone-200 border border-stone-200 dark:border-slate-600 hover:bg-amber-100 dark:hover:bg-slate-600 btn-press"
+            className="p-1.5 rounded-xl bg-theme-bg-card text-theme-text-secondary border border-theme-border/60 hover:bg-theme-bg-muted btn-press"
             title="Past Daily Archive"
           >
             <History className="w-4 h-4" />
@@ -77,13 +77,13 @@ export const DailyModeView: React.FC<DailyModeViewProps> = ({
 
       {/* Archive Dropdown Drawer */}
       {showArchive && (
-        <div className="mt-2 p-3 rounded-2xl bg-white dark:bg-slate-800 shadow-xl border border-stone-200 dark:border-slate-700 animate-pop">
+        <div className="mt-2 p-3 rounded-2xl bg-theme-modal shadow-xl border border-theme-border animate-pop">
           <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-bold text-stone-700 dark:text-stone-300 flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-amber-500" />
+            <h3 className="text-xs font-bold text-theme-text-primary flex items-center gap-1.5">
+              <Calendar className="w-3.5 h-3.5 text-theme-accent" />
               Past Daily Puzzles
             </h3>
-            <span className="text-[10px] text-stone-400 font-mono">
+            <span className="text-[10px] text-theme-text-muted font-mono">
               Next in {String(countdown.hours).padStart(2, '0')}:{String(countdown.minutes).padStart(2, '0')}:{String(countdown.seconds).padStart(2, '0')}
             </span>
           </div>
@@ -102,10 +102,10 @@ export const DailyModeView: React.FC<DailyModeViewProps> = ({
                   }}
                   className={`p-2 rounded-xl text-left border transition-all btn-press ${
                     isSelected
-                      ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+                      ? 'bg-theme-accent text-theme-accent-text border-theme-accent font-black shadow-sm'
                       : record?.won
-                      ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800'
-                      : 'bg-stone-50 dark:bg-slate-700 text-stone-700 dark:text-stone-300 border-stone-200 dark:border-slate-600'
+                      ? 'bg-emerald-500/20 text-emerald-600 border-emerald-500/40'
+                      : 'bg-theme-modal-subcard text-theme-text-secondary border-theme-modal-subcard-border hover:bg-theme-bg-secondary'
                   }`}
                 >
                   <div className="text-[10px] font-bold opacity-75">#{item.dayNumber}</div>
