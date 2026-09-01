@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { GameMode } from '../types/game';
-import { HelpCircle, BarChart2, Settings, Volume2, VolumeX, Sparkles, Trophy, Zap, Users, Calendar, Infinity, PlusCircle } from 'lucide-react';
+import { HelpCircle, BarChart2, Settings, Volume2, VolumeX, Sparkles, Trophy, Zap, Users, Calendar, Infinity, PlusCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { soundFx } from '../services/audio';
 
 interface HeaderProps {
@@ -31,6 +31,54 @@ export const Header: React.FC<HeaderProps> = ({
     { id: 'versus', label: 'Vs Bot 🤖', icon: <Users className="w-4 h-4 text-sky-500" /> },
     { id: 'campaign', label: 'Gauntlet 🏆', icon: <Trophy className="w-4 h-4 text-yellow-500" /> },
   ];
+
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  // Monitor scroll bounds to conditionally show left/right arrow buttons
+  const checkScroll = useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    setCanScrollLeft(el.scrollLeft > 6);
+    setCanScrollRight(el.scrollLeft + el.clientWidth < el.scrollWidth - 6);
+  }, []);
+
+  useEffect(() => {
+    checkScroll();
+    const el = scrollRef.current;
+    if (!el) return;
+    el.addEventListener('scroll', checkScroll, { passive: true });
+    window.addEventListener('resize', checkScroll);
+    return () => {
+      el.removeEventListener('scroll', checkScroll);
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, [checkScroll]);
+
+  // Auto-scroll active mode into view if partially hidden
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const activeEl = el.querySelector<HTMLElement>('[data-active="true"]');
+    if (activeEl) {
+      activeEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
+    }
+  }, [currentMode]);
+
+  const scrollByAmount = (offset: number) => {
+    if (scrollRef.current) {
+      soundFx.playKey();
+      scrollRef.current.scrollBy({ left: offset, behavior: 'smooth' });
+    }
+  };
+
+  // Allow standard vertical mouse wheel to scroll horizontal modes bar
+  const handleWheel = (e: React.WheelEvent) => {
+    if (scrollRef.current && Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
+      scrollRef.current.scrollLeft += e.deltaY;
+    }
+  };
 
   return (
     <header className="w-full max-w-2xl mx-auto px-4 py-3 border-b border-theme-border/60">
@@ -122,37 +170,69 @@ export const Header: React.FC<HeaderProps> = ({
         </div>
       </div>
 
-      {/* Mode navigation tabs */}
-      <div className="mt-3 flex items-center justify-center gap-1.5 sm:gap-2 overflow-x-auto pb-1 no-scrollbar">
-        {modes.map(mode => {
-          const isActive = currentMode === mode.id;
-          return (
-            <button
-              key={mode.id}
-              onClick={() => {
-                if (currentMode !== mode.id) {
-                  soundFx.playKey();
-                  onSelectMode(mode.id);
-                }
-              }}
-              className={`relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap btn-press ${
-                isActive
-                  ? 'bg-theme-nav-active text-theme-nav-active shadow-md scale-105 font-black ring-2 ring-amber-500/30'
-                  : 'bg-theme-nav-inactive text-theme-nav-inactive hover:opacity-90'
-              }`}
-            >
-              {mode.icon}
-              <span>{mode.label}</span>
-              {mode.id === 'unlimited' && (
-                <span className={`text-[9px] px-1 py-0.5 rounded font-black tracking-tight uppercase ${
-                  isActive ? 'bg-amber-500 text-white' : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
-                }`}>
-                  No Limit
-                </span>
-              )}
-            </button>
-          );
-        })}
+      {/* Mode navigation tabs with scroll chevrons and smooth swipe */}
+      <div className="mt-3 relative flex items-center w-full">
+        {/* Left Scroll Chevron */}
+        {canScrollLeft && (
+          <button
+            type="button"
+            onClick={() => scrollByAmount(-140)}
+            aria-label="Scroll modes left"
+            className="absolute left-0 z-20 p-1.5 rounded-full bg-theme-bg-card/95 hover:bg-theme-bg-secondary border border-theme-border shadow-lg text-theme-text-primary backdrop-blur-md transition-all -translate-x-1 sm:-translate-x-2 btn-press"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Scrollable Modes Track */}
+        <div
+          ref={scrollRef}
+          onWheel={handleWheel}
+          className="flex-1 flex items-center overflow-x-auto no-scrollbar scroll-smooth py-1 px-1 sm:px-2 gap-1.5 sm:gap-2 justify-start sm:justify-center touch-pan-x"
+        >
+          {modes.map(mode => {
+            const isActive = currentMode === mode.id;
+            return (
+              <button
+                key={mode.id}
+                data-active={isActive ? "true" : "false"}
+                onClick={() => {
+                  if (currentMode !== mode.id) {
+                    soundFx.playKey();
+                    onSelectMode(mode.id);
+                  }
+                }}
+                className={`shrink-0 relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap btn-press select-none ${
+                  isActive
+                    ? 'bg-theme-nav-active text-theme-nav-active shadow-md scale-105 font-black ring-2 ring-amber-500/30'
+                    : 'bg-theme-nav-inactive text-theme-nav-inactive hover:opacity-90'
+                }`}
+              >
+                {mode.icon}
+                <span>{mode.label}</span>
+                {mode.id === 'unlimited' && (
+                  <span className={`text-[9px] px-1 py-0.5 rounded font-black tracking-tight uppercase ${
+                    isActive ? 'bg-amber-500 text-white' : 'bg-amber-500/20 text-amber-600 dark:text-amber-400'
+                  }`}>
+                    No Limit
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Right Scroll Chevron */}
+        {canScrollRight && (
+          <button
+            type="button"
+            onClick={() => scrollByAmount(140)}
+            aria-label="Scroll modes right"
+            className="absolute right-0 z-20 p-1.5 rounded-full bg-theme-bg-card/95 hover:bg-theme-bg-secondary border border-theme-border shadow-lg text-theme-text-primary backdrop-blur-md transition-all translate-x-1 sm:translate-x-2 btn-press"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
       </div>
     </header>
   );
