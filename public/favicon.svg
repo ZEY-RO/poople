@@ -1,18 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="poopGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#f59e0b" />
-      <stop offset="50%" stop-color="#d97706" />
-      <stop offset="100%" stop-color="#b45309" />
-    </linearGradient>
-  </defs>
-  <!-- Background squircle -->
-  <rect width="64" height="64" rx="16" fill="#1e293b" />
-  
-  <!-- Poop emoji icon -->
-  <text x="32" y="38" font-size="34" text-anchor="middle" dominant-baseline="central">💩</text>
-  
-  <!-- Infinity symbol badge in corner to represent Unlimited Mode -->
-  <circle cx="48" cy="48" r="13" fill="#f59e0b" stroke="#ffffff" stroke-width="2" />
-  <text x="48" y="49" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="16" font-weight="900" text-anchor="middle" dominant-baseline="central" fill="#ffffff">∞</text>
+  <!-- Minimalist, high-contrast, uncluttered favicon -->
+  <rect width="64" height="64" rx="18" fill="#0ea5e9" />
+  <text x="32" y="34" font-size="38" text-anchor="middle" dominant-baseline="central">💩</text>
 </svg>
