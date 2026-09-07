@@ -27,7 +27,15 @@ export interface LivePlayerStats {
   };
 }
 
-const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').trim();
+function sanitizeSupabaseUrl(raw: string): string {
+  let url = raw.trim();
+  url = url.replace(/\/+$/, '');
+  url = url.replace(/\/rest\/v1\/?$/, '');
+  return url.replace(/\/+$/, '');
+}
+
+const RAW_SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').trim();
+const SUPABASE_URL = sanitizeSupabaseUrl(RAW_SUPABASE_URL);
 const SUPABASE_KEY = (
   import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
   import.meta.env.VITE_SUPABASE_KEY ||
@@ -89,12 +97,29 @@ export function distributeByMode(total: number): LivePlayerStats['byMode'] {
  * @param currentMode Optional active game mode to track the player's presence accurately
  */
 export function useLivePlayerCount(currentMode: GameMode = 'daily') {
-  const [stats, setStats] = useState<LivePlayerStats>(() => ({
-    total: calculateTargetBase(),
-    delta: 0,
-    isRealtime: isRealtimeConfigured,
-    byMode: distributeByMode(calculateTargetBase()),
-  }));
+  const [stats, setStats] = useState<LivePlayerStats>(() => {
+    if (isRealtimeConfigured) {
+      return {
+        total: 1,
+        delta: 0,
+        isRealtime: true,
+        byMode: {
+          unlimited: currentMode === 'unlimited' || currentMode === 'custom' ? 1 : 0,
+          daily: currentMode === 'daily' ? 1 : 0,
+          rush: currentMode === 'rush' ? 1 : 0,
+          versus: currentMode === 'versus' ? 1 : 0,
+          campaign: currentMode === 'campaign' ? 1 : 0,
+        },
+      };
+    }
+
+    return {
+      total: calculateTargetBase(),
+      delta: 0,
+      isRealtime: false,
+      byMode: distributeByMode(calculateTargetBase()),
+    };
+  });
 
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine : true
@@ -176,12 +201,14 @@ export function useLivePlayerCount(currentMode: GameMode = 'daily') {
       }));
     });
 
-    channel.subscribe(async (status) => {
+    channel.subscribe(async (status, err) => {
       if (status === 'SUBSCRIBED') {
         await channel.track({
           mode: currentMode,
           onlineAt: Date.now(),
         });
+      } else if (status === 'CHANNEL_ERROR') {
+        console.warn('Supabase presence error:', err);
       }
     });
 
