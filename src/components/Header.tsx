@@ -186,7 +186,7 @@ export const Header: React.FC<HeaderProps> = ({
 
       {/* Live Active Player Counter */}
       <div className="flex items-center justify-center mt-2 -mb-0.5">
-        <LivePlayerBadge />
+        <LivePlayerBadge currentMode={currentMode} />
       </div>
 
       {/* Mode navigation tabs with scroll chevrons and smooth swipe */}

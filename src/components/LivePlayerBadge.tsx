@@ -2,12 +2,15 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Users, WifiOff, ChevronDown, Flame, Calendar, Zap, Bot, Trophy } from 'lucide-react';
 import { useLivePlayerCount } from '../services/liveCounter';
 
+import { GameMode } from '../types/game';
+
 interface LivePlayerBadgeProps {
+  currentMode?: GameMode;
   className?: string;
 }
 
-export const LivePlayerBadge: React.FC<LivePlayerBadgeProps> = ({ className = '' }) => {
-  const { stats, isOnline } = useLivePlayerCount();
+export const LivePlayerBadge: React.FC<LivePlayerBadgeProps> = ({ currentMode = 'daily', className = '' }) => {
+  const { stats, isOnline } = useLivePlayerCount(currentMode);
   const [isOpen, setIsOpen] = useState(false);
   const [flashDelta, setFlashDelta] = useState<'up' | 'down' | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -170,7 +173,9 @@ export const LivePlayerBadge: React.FC<LivePlayerBadgeProps> = ({ className = ''
 
           <div className="mt-2.5 pt-2 border-t border-theme-border/60 text-center">
             <p className="text-[10px] text-theme-text-muted">
-              Synchronized real-time across active browser sessions
+              {stats.isRealtime
+                ? '🟢 100% Real-time presence via Supabase WebSockets'
+                : 'Synchronized real-time across active browser sessions'}
             </p>
           </div>
         </div>

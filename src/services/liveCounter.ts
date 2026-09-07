@@ -1,20 +1,23 @@
 /**
- * Live Player Counter Service & Hook for Poople
+ * Live Player Presence Engine for Poople
  * 
- * Provides realistic, synchronized live concurrent player presence.
- * Features:
- * - UTC Diurnal traffic cycle (peaks during global high-activity hours)
- * - Natural micro-fluctuations (subtle real-time drift every few seconds)
- * - Cross-tab synchronization via BroadcastChannel and localStorage
- * - Mode breakdown (Unlimited, Daily, Rush, Versus, Campaign)
- * - Network status awareness (online/offline)
+ * Supports 100% real-time global player tracking via Supabase Realtime Presence
+ * (free tier: 200 concurrent WebSockets, 2M messages/mo, $0 cost).
+ * 
+ * When VITE_SUPABASE_URL & VITE_SUPABASE_ANON_KEY are set, it connects to Supabase
+ * WebSockets, tracks actual active tabs and game modes, and updates in real time.
+ * If credentials are not yet configured, it seamlessly falls back to the realistic
+ * UTC diurnal model so the UI remains polished.
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { createClient, RealtimeChannel } from '@supabase/supabase-js';
+import { GameMode } from '../types/game';
 
 export interface LivePlayerStats {
   total: number;
   delta: number;
+  isRealtime: boolean;
   byMode: {
     unlimited: number;
     daily: number;
@@ -24,104 +27,76 @@ export interface LivePlayerStats {
   };
 }
 
-const STORAGE_KEY = 'poople_live_players_sync';
-const BROADCAST_NAME = 'poople_live_counter';
+const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').trim();
+const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
 
-/**
- * Calculates a plausible diurnal base count based on current UTC time.
- * Peak around 18:00 UTC (Europe evening / US afternoon).
- * Trough around 06:00 UTC (Pacific night).
- */
-export function calculateTargetBase(date = new Date()): number {
-  const utcHours = date.getUTCHours() + date.getUTCMinutes() / 60;
-  // Sine curve with peak at 18:00 UTC and trough at 06:00 UTC
-  const cycle = Math.sin(((utcHours - 10) / 24) * 2 * Math.PI);
-  
-  // Weekend boost (Saturday = 6, Sunday = 0)
-  const day = date.getUTCDay();
-  const weekendFactor = (day === 0 || day === 6) ? 1.15 : 1.0;
-  
-  // Base between ~1,150 and ~2,380 players
-  return Math.round((1480 + 580 * cycle) * weekendFactor);
+export const isRealtimeConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+
+// Create Supabase client singleton if configured
+const supabase = isRealtimeConfigured
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      realtime: {
+        params: {
+          eventsPerSecond: 10,
+        },
+      },
+    })
+  : null;
+
+function getClientId(): string {
+  try {
+    let id = sessionStorage.getItem('poople_presence_id');
+    if (!id) {
+      id = typeof crypto !== 'undefined' && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `p_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+      sessionStorage.setItem('poople_presence_id', id);
+    }
+    return id;
+  } catch {
+    return `p_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+  }
 }
 
 /**
- * Distributes total player count realistically across game modes
+ * Fallback UTC diurnal base calculation when Supabase is not configured
  */
+export function calculateTargetBase(date = new Date()): number {
+  const utcHours = date.getUTCHours() + date.getUTCMinutes() / 60;
+  const cycle = Math.sin(((utcHours - 10) / 24) * 2 * Math.PI);
+  const day = date.getUTCDay();
+  const weekendFactor = (day === 0 || day === 6) ? 1.15 : 1.0;
+  return Math.round((1480 + 580 * cycle) * weekendFactor);
+}
+
 export function distributeByMode(total: number): LivePlayerStats['byMode'] {
-  // Typical breakdown:
-  // Unlimited: ~42%
-  // Daily Challenge: ~30%
-  // Rush Mode: ~14%
-  // Versus Bot: ~8%
-  // Campaign: ~6%
   const unlimited = Math.round(total * 0.42);
   const daily = Math.round(total * 0.30);
   const rush = Math.round(total * 0.14);
   const versus = Math.round(total * 0.08);
   const campaign = Math.max(0, total - (unlimited + daily + rush + versus));
 
-  return {
-    unlimited,
-    daily,
-    rush,
-    versus,
-    campaign,
-  };
+  return { unlimited, daily, rush, versus, campaign };
 }
 
 /**
- * Retrieves the cached live counter if recent (< 15 seconds old),
- * otherwise initializes a new realistic baseline.
+ * Hook for live player presence
+ * @param currentMode Optional active game mode to track the player's presence accurately
  */
-function getInitialStats(): LivePlayerStats {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      const age = Date.now() - (parsed.timestamp || 0);
-      if (age < 15000 && typeof parsed.total === 'number' && parsed.total > 500) {
-        return {
-          total: parsed.total,
-          delta: parsed.delta || 0,
-          byMode: distributeByMode(parsed.total)
-        };
-      }
-    }
-  } catch {
-    // Ignore storage parse errors
-  }
-
-  const base = calculateTargetBase();
-  // Add small initial random seed +/- 20
-  const total = base + Math.floor(Math.random() * 41) - 20;
-  return {
-    total,
+export function useLivePlayerCount(currentMode: GameMode = 'daily') {
+  const [stats, setStats] = useState<LivePlayerStats>(() => ({
+    total: calculateTargetBase(),
     delta: 0,
-    byMode: distributeByMode(total)
-  };
-}
+    isRealtime: isRealtimeConfigured,
+    byMode: distributeByMode(calculateTargetBase()),
+  }));
 
-function saveSyncStats(stats: LivePlayerStats) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({
-      total: stats.total,
-      delta: stats.delta,
-      timestamp: Date.now()
-    }));
-  } catch {
-    // Ignore storage write errors
-  }
-}
-
-/**
- * React Hook that provides synchronized live player count and breakdown
- */
-export function useLivePlayerCount() {
-  const [stats, setStats] = useState<LivePlayerStats>(getInitialStats);
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== 'undefined' ? navigator.onLine : true
   );
+
+  const channelRef = useRef<RealtimeChannel | null>(null);
+  const clientId = useRef<string>(getClientId());
 
   // Monitor network online/offline state
   useEffect(() => {
@@ -137,7 +112,95 @@ export function useLivePlayerCount() {
     };
   }, []);
 
+  // --- Realtime Supabase Presence Mode ---
   useEffect(() => {
+    if (!isRealtimeConfigured || !supabase) return;
+
+    const channelName = 'poople_global_presence';
+    const channel = supabase.channel(channelName, {
+      config: {
+        presence: {
+          key: clientId.current,
+        },
+      },
+    });
+
+    channelRef.current = channel;
+
+    channel.on('presence', { event: 'sync' }, () => {
+      const presenceState = channel.presenceState();
+      const keys = Object.keys(presenceState);
+      const realTotal = Math.max(1, keys.length); // Include at least current player
+
+      const modeCounts: LivePlayerStats['byMode'] = {
+        unlimited: 0,
+        daily: 0,
+        rush: 0,
+        versus: 0,
+        campaign: 0,
+      };
+
+      // Aggregate mode of each connected real player
+      keys.forEach((key) => {
+        const presences = presenceState[key] as Array<{ mode?: GameMode }> | undefined;
+        if (presences && presences.length > 0) {
+          const userMode = presences[0].mode || 'daily';
+          if (userMode === 'unlimited' || userMode === 'custom') {
+            modeCounts.unlimited++;
+          } else if (userMode === 'daily') {
+            modeCounts.daily++;
+          } else if (userMode === 'rush') {
+            modeCounts.rush++;
+          } else if (userMode === 'versus') {
+            modeCounts.versus++;
+          } else if (userMode === 'campaign') {
+            modeCounts.campaign++;
+          } else {
+            modeCounts.daily++;
+          }
+        } else {
+          modeCounts.daily++;
+        }
+      });
+
+      setStats((prev) => ({
+        total: realTotal,
+        delta: realTotal - prev.total,
+        isRealtime: true,
+        byMode: modeCounts,
+      }));
+    });
+
+    channel.subscribe(async (status) => {
+      if (status === 'SUBSCRIBED') {
+        await channel.track({
+          mode: currentMode,
+          onlineAt: Date.now(),
+        });
+      }
+    });
+
+    return () => {
+      channel.unsubscribe();
+      channelRef.current = null;
+    };
+  }, []);
+
+  // Update current game mode in Supabase presence when mode changes
+  useEffect(() => {
+    if (isRealtimeConfigured && channelRef.current) {
+      channelRef.current.track({
+        mode: currentMode,
+        onlineAt: Date.now(),
+      }).catch(() => {});
+    }
+  }, [currentMode]);
+
+  // --- Fallback Simulation Mode (when Supabase credentials not yet supplied) ---
+  useEffect(() => {
+    if (isRealtimeConfigured) return;
+
+    const BROADCAST_NAME = 'poople_live_counter';
     let broadcast: BroadcastChannel | null = null;
     try {
       if (typeof BroadcastChannel !== 'undefined') {
@@ -147,59 +210,48 @@ export function useLivePlayerCount() {
             setStats({
               total: event.data.total,
               delta: event.data.delta || 0,
-              byMode: distributeByMode(event.data.total)
+              isRealtime: false,
+              byMode: distributeByMode(event.data.total),
             });
           }
         };
       }
-    } catch {
-      // Ignore broadcast channel errors
-    }
+    } catch {}
 
     let timeoutId: any = null;
     let isMounted = true;
 
     const scheduleNextTick = () => {
-      // Fluctuate every 3.5 to 6.5 seconds
       const delay = 3500 + Math.random() * 3000;
-      
       timeoutId = setTimeout(() => {
         if (!isMounted) return;
 
         setStats((prev) => {
           const target = calculateTargetBase();
           const diff = target - prev.total;
-
-          // Mean-reversion pressure: if we drifted far from target, pull back gently
           let meanReversion = 0;
           if (Math.abs(diff) > 40) {
             meanReversion = diff > 0 ? 2 : -2;
           }
 
-          // Random natural step: -5 to +6
           const randomStep = Math.floor(Math.random() * 11) - 5;
           const step = randomStep + meanReversion;
-
-          // Ensure minimum realistic threshold
           const newTotal = Math.max(750, prev.total + step);
           const newDelta = newTotal - prev.total;
 
           const updated: LivePlayerStats = {
             total: newTotal,
             delta: newDelta,
-            byMode: distributeByMode(newTotal)
+            isRealtime: false,
+            byMode: distributeByMode(newTotal),
           };
-
-          saveSyncStats(updated);
 
           try {
             broadcast?.postMessage({
               total: updated.total,
-              delta: updated.delta
+              delta: updated.delta,
             });
-          } catch {
-            // Ignore broadcast failure
-          }
+          } catch {}
 
           return updated;
         });
@@ -215,11 +267,9 @@ export function useLivePlayerCount() {
       if (timeoutId) clearTimeout(timeoutId);
       try {
         broadcast?.close();
-      } catch {
-        // Ignore close failure
-      }
+      } catch {}
     };
   }, []);
 
-  return { stats, isOnline };
+  return { stats, isOnline, isRealtime: stats.isRealtime };
 }
