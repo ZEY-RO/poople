@@ -2,6 +2,7 @@ import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { GameMode } from '../types/game';
 import { HelpCircle, BarChart2, Settings, Volume2, VolumeX, Sparkles, Trophy, Zap, Users, Calendar, Infinity, PlusCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { soundFx } from '../services/audio';
+import { LivePlayerBadge } from './LivePlayerBadge';
 
 interface HeaderProps {
   currentMode: GameMode;
@@ -181,6 +182,11 @@ export const Header: React.FC<HeaderProps> = ({
             <Settings className="w-5 h-5 sm:w-6 sm:h-6" />
           </button>
         </div>
+      </div>
+
+      {/* Live Active Player Counter */}
+      <div className="flex items-center justify-center mt-2 -mb-0.5">
+        <LivePlayerBadge />
       </div>
 
       {/* Mode navigation tabs with scroll chevrons and smooth swipe */}

@@ -1,7 +1,8 @@
 import React from 'react';
 import { PlayerStats } from '../types/game';
-import { Trophy, Zap, Swords, Star, Award, X } from 'lucide-react';
+import { Trophy, Zap, Swords, Star, Award, X, Users } from 'lucide-react';
 import { soundFx } from '../services/audio';
+import { useLivePlayerCount } from '../services/liveCounter';
 
 interface StatsModalProps {
   stats: PlayerStats;
@@ -9,6 +10,7 @@ interface StatsModalProps {
 }
 
 export const StatsModal: React.FC<StatsModalProps> = ({ stats, onClose }) => {
+  const { stats: liveStats, isOnline } = useLivePlayerCount();
   const winRate = stats.dailyPlayed > 0 ? Math.round((stats.dailyWins / stats.dailyPlayed) * 100) : 0;
   const totalCampaignStars = Object.values(stats.campaignStars).reduce((a, b) => a + b, 0);
 
@@ -141,6 +143,33 @@ export const StatsModal: React.FC<StatsModalProps> = ({ stats, onClose }) => {
                 {totalCampaignStars}
               </div>
               <span className="text-[10px] font-bold text-theme-text-muted block">Stars Won</span>
+            </div>
+          </div>
+
+          {/* Live Community Activity */}
+          <div className="p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <div>
+                <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1.5">
+                  <Users className="w-3.5 h-3.5" />
+                  Live Community Activity
+                </div>
+                <div className="text-[10px] text-theme-text-muted">
+                  {isOnline ? 'Active players solving ladders worldwide' : 'Offline mode'}
+                </div>
+              </div>
+            </div>
+            <div className="text-right">
+              <span className="text-base font-display font-black text-emerald-600 dark:text-emerald-400 tabular-nums">
+                {liveStats.total.toLocaleString()}
+              </span>
+              <span className="block text-[9px] font-bold uppercase tracking-wider text-theme-text-muted">
+                online now
+              </span>
             </div>
           </div>
         </div>
