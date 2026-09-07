@@ -28,13 +28,18 @@ export interface LivePlayerStats {
 }
 
 const SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').trim();
-const SUPABASE_ANON_KEY = (import.meta.env.VITE_SUPABASE_ANON_KEY || '').trim();
+const SUPABASE_KEY = (
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+  import.meta.env.VITE_SUPABASE_KEY ||
+  import.meta.env.VITE_SUPABASE_ANON_KEY ||
+  ''
+).trim();
 
-export const isRealtimeConfigured = Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+export const isRealtimeConfigured = Boolean(SUPABASE_URL && SUPABASE_KEY);
 
 // Create Supabase client singleton if configured
 const supabase = isRealtimeConfigured
-  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  ? createClient(SUPABASE_URL, SUPABASE_KEY, {
       realtime: {
         params: {
           eventsPerSecond: 10,
