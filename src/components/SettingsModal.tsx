@@ -1,6 +1,6 @@
 import React from 'react';
 import { GameSettings, ThemeId, SoundProfile, KeyboardLayout } from '../types/game';
-import { Settings, Volume2, Palette, Keyboard, ShieldAlert, X, Check, Sparkles, RotateCcw } from 'lucide-react';
+import { Settings, Volume2, Palette, Keyboard, ShieldAlert, X, Check, Sparkles, RotateCcw, BarChart3 } from 'lucide-react';
 import { soundFx } from '../services/audio';
 import { applyTheme } from '../services/theme';
 import { DEFAULT_SETTINGS } from '../services/storage';
@@ -9,12 +9,14 @@ interface SettingsModalProps {
   settings: GameSettings;
   onUpdateSettings: (newSettings: GameSettings) => void;
   onClose: () => void;
+  onOpenSiteAnalytics?: () => void;
 }
 
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   settings,
   onUpdateSettings,
-  onClose
+  onClose,
+  onOpenSiteAnalytics
 }) => {
   const themes: Array<{
     id: ThemeId;
@@ -357,6 +359,35 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               />
             </div>
           </div>
+
+          {/* Site Analytics Admin Section */}
+          {onOpenSiteAnalytics && (
+            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-3">
+              <div>
+                <div className="font-bold text-xs text-theme-text-primary flex items-center gap-1.5">
+                  <BarChart3 className="w-4 h-4 text-theme-accent" />
+                  Site & Traffic Analytics
+                  <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                    Admin
+                  </span>
+                </div>
+                <div className="text-[11px] text-theme-text-muted mt-0.5">
+                  View unique visitors, active time spent, devices & traffic referrers
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  soundFx.playKey();
+                  onClose();
+                  onOpenSiteAnalytics();
+                }}
+                className="shrink-0 px-3 py-1.5 rounded-xl bg-theme-accent text-theme-accent-text font-bold text-xs shadow hover:opacity-90 transition-opacity btn-press"
+              >
+                Open Dashboard
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Modal Footer with Save & Close */}

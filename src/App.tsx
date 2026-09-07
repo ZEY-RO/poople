@@ -22,6 +22,8 @@ import { SettingsModal } from './components/SettingsModal';
 import { TutorialModal } from './components/TutorialModal';
 import { CustomPuzzleModal } from './components/CustomPuzzleModal';
 import { DefinitionModal } from './components/DefinitionModal';
+import { SiteAnalyticsModal } from './components/SiteAnalyticsModal';
+import { analytics } from './services/analytics';
 
 export const App: React.FC = () => {
   // Settings & Stats
@@ -76,6 +78,13 @@ export const App: React.FC = () => {
   const [isTutorialOpen, setIsTutorialOpen] = useState<boolean>(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState<boolean>(false);
   const [isWinModalOpen, setIsWinModalOpen] = useState<boolean>(false);
+  const [isSiteAnalyticsOpen, setIsSiteAnalyticsOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.has('analytics') || params.has('admin');
+    }
+    return false;
+  });
   const [selectedDefWord, setSelectedDefWord] = useState<{ word: string; def: string } | null>(null);
 
   // Initialize theme class and audio config
@@ -83,6 +92,23 @@ export const App: React.FC = () => {
     applyTheme(settings.theme);
     soundFx.setConfig(settings.soundEnabled, settings.soundVolume, settings.soundProfile);
   }, [settings]);
+
+  // Initialize Analytics Engine
+  useEffect(() => {
+    analytics.init();
+  }, []);
+
+  // Keyboard shortcut Alt+Shift+A or Ctrl+Shift+A to toggle Site Analytics Dashboard
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.altKey || e.ctrlKey) && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
+        e.preventDefault();
+        setIsSiteAnalyticsOpen(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
 
 
@@ -97,6 +123,11 @@ export const App: React.FC = () => {
     setStatus('playing');
     setStartTime(Date.now());
     setIsWinModalOpen(false);
+
+    analytics.trackGameStart(targetMode, {
+      dateKey: options?.dateKey,
+      diff: options?.diff || difficulty
+    });
 
     if (targetMode === 'daily') {
       const date = options?.dateKey || formatDateToKey();
@@ -207,6 +238,7 @@ export const App: React.FC = () => {
   // Handle Mode Change
   const handleSelectMode = (newMode: GameMode) => {
     setMode(newMode);
+    analytics.trackModeSwitch(newMode);
 
     // Sync URL without reload so players can share or bookmark their current mode (e.g. ?mode=unlimited)
     try {
@@ -261,6 +293,9 @@ export const App: React.FC = () => {
     setErrorMessage(msg);
     setIsShaking(true);
     setTimeout(() => setIsShaking(false), 380);
+    if (currentInput) {
+      analytics.trackWordSubmission(currentInput, false);
+    }
   };
 
   // Submit Step Handler
@@ -279,6 +314,8 @@ export const App: React.FC = () => {
     }
 
     // Move is valid!
+    analytics.trackWordSubmission(currentInput, true);
+
     const newStep: Step = {
       word: currentInput,
       changedIndex: validation.changedIndex ?? null,
@@ -303,6 +340,7 @@ export const App: React.FC = () => {
     setStatus('won');
     soundFx.playVictory();
     const timeSec = Math.round((Date.now() - startTime) / 1000);
+    analytics.trackGameEnd(mode, true, finalHistory.length, par, timeSec);
 
     if (mode === 'daily') {
       const updated = recordDailyCompletion({
@@ -697,6 +735,7 @@ export const App: React.FC = () => {
         <StatsModal
           stats={stats}
           onClose={() => setIsStatsOpen(false)}
+          onOpenSiteAnalytics={() => setIsSiteAnalyticsOpen(true)}
         />
       )}
 
@@ -708,6 +747,13 @@ export const App: React.FC = () => {
             saveSettings(s);
           }}
           onClose={() => setIsSettingsOpen(false)}
+          onOpenSiteAnalytics={() => setIsSiteAnalyticsOpen(true)}
+        />
+      )}
+
+      {isSiteAnalyticsOpen && (
+        <SiteAnalyticsModal
+          onClose={() => setIsSiteAnalyticsOpen(false)}
         />
       )}
 

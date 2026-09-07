@@ -1,15 +1,16 @@
 import React from 'react';
 import { PlayerStats } from '../types/game';
-import { Trophy, Zap, Swords, Star, Award, X, Users } from 'lucide-react';
+import { Trophy, Zap, Swords, Star, Award, X, Users, BarChart3 } from 'lucide-react';
 import { soundFx } from '../services/audio';
 import { useLivePlayerCount } from '../services/liveCounter';
 
 interface StatsModalProps {
   stats: PlayerStats;
   onClose: () => void;
+  onOpenSiteAnalytics?: () => void;
 }
 
-export const StatsModal: React.FC<StatsModalProps> = ({ stats, onClose }) => {
+export const StatsModal: React.FC<StatsModalProps> = ({ stats, onClose, onOpenSiteAnalytics }) => {
   const { stats: liveStats, isOnline } = useLivePlayerCount();
   const winRate = stats.dailyPlayed > 0 ? Math.round((stats.dailyWins / stats.dailyPlayed) * 100) : 0;
   const totalCampaignStars = Object.values(stats.campaignStars).reduce((a, b) => a + b, 0);
@@ -172,6 +173,29 @@ export const StatsModal: React.FC<StatsModalProps> = ({ stats, onClose }) => {
               </span>
             </div>
           </div>
+
+          {/* Site & Visitor Analytics Button */}
+          {onOpenSiteAnalytics && (
+            <button
+              onClick={() => {
+                soundFx.playKey();
+                onClose();
+                onOpenSiteAnalytics();
+              }}
+              className="w-full py-2.5 px-3.5 rounded-2xl bg-theme-modal-subcard hover:bg-theme-bg-secondary border border-theme-modal-subcard-border flex items-center justify-between text-xs font-bold text-theme-text-primary transition-colors btn-press group shadow-sm"
+            >
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-4 h-4 text-theme-accent" />
+                <span>Site & Visitor Analytics</span>
+                <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400">
+                  Admin
+                </span>
+              </div>
+              <span className="text-[11px] text-theme-text-muted group-hover:text-theme-accent transition-colors">
+                View Traffic &rarr;
+              </span>
+            </button>
+          )}
         </div>
       </div>
     </div>
