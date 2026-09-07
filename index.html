@@ -2,13 +2,16 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <!-- Standard Favicons for Browsers & Googlebot-Favicon -->
-    <link rel="icon" href="/favicon.ico" sizes="48x48" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <!-- Standard Favicons for Browsers & Googlebot-Favicon (Google Search requires 48x48+ square raster format) -->
     <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png" />
+    <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="icon" href="/favicon.ico" sizes="48x48" />
+    <link rel="shortcut icon" href="/favicon.ico" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="manifest" href="/site.webmanifest" />
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
@@ -44,9 +47,23 @@
     <meta property="twitter:image" content="https://poople.site/og-image.png" />
     <meta property="twitter:image:alt" content="Poople - Play Unlimited Word Ladder Game" />
 
-    <!-- Google Structured Data JSON-LD (WebGame + FAQ Schema for SERP Rich Snippets) -->
+    <!-- Google Structured Data JSON-LD (WebSite, Organization, WebGame + FAQ Schema for SERP Rich Snippets & Knowledge Graph) -->
     <script type="application/ld+json">
     [
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Poople",
+        "alternateName": ["Poople Game", "Poople Unlimited", "Play Unlimited Poople"],
+        "url": "https://poople.site/"
+      },
+      {
+        "@context": "https://schema.org",
+        "@type": "Organization",
+        "name": "Poople",
+        "url": "https://poople.site/",
+        "logo": "https://poople.site/logo.png"
+      },
       {
         "@context": "https://schema.org",
         "@type": "WebApplication",
@@ -132,6 +149,7 @@
     <!-- Crawlable semantic fallback for search engine indexing before React mounts -->
     <div id="root">
       <div style="font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; text-align: center; color: #334155;">
+        <img src="/logo.png" alt="Poople Word Ladder Game Logo" width="64" height="64" style="margin: 0 auto 16px; border-radius: 16px; display: block;" />
         <h1 style="font-size: 28px; font-weight: 800; color: #d97706; margin-bottom: 12px;">Play Unlimited Poople — Free Word Ladder Game</h1>
         <p style="font-size: 16px; line-height: 1.6; color: #475569; margin-bottom: 16px;">
           Welcome to <strong>Poople</strong>, the viral word ladder puzzle game with <strong>Unlimited Mode</strong>! Change one letter at a time to transform your starting word into <strong>POOP</strong>. No daily limits or 24-hour waiting periods—enjoy endless puzzles whenever you want.
