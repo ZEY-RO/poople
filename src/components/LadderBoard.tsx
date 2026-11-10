@@ -1,8 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 import { Step } from '../types/game';
 import { getWordDefinition } from '../data/dictionary';
-import { HelpCircle, RotateCcw, AlertTriangle, CheckCircle2, Lock } from 'lucide-react';
-import { soundFx } from '../services/audio';
+import { Info, RotateCcw, AlertCircle, Check, Lock } from 'lucide-react';
 
 interface LadderBoardProps {
   startWord: string;
@@ -10,242 +9,55 @@ interface LadderBoardProps {
   history: Step[];
   currentInput: string;
   isWon: boolean;
+  disabled?: boolean;
   par: number;
   errorMessage: string | null;
   isShaking: boolean;
   onSelectWordDefinition: (word: string, def: string) => void;
   onRewindToStep?: (index: number) => void;
+  onInputChange: (value: string) => void;
+  onSubmitWord: () => void;
   showDeadEndRadar?: boolean;
   isDeadEnd?: boolean;
   hardMode?: boolean;
 }
 
-export const LadderBoard: React.FC<LadderBoardProps> = ({
-  startWord,
-  targetWord,
-  history,
-  currentInput,
-  isWon,
-  par,
-  errorMessage,
-  isShaking,
-  onSelectWordDefinition,
-  onRewindToStep,
-  showDeadEndRadar = true,
-  isDeadEnd = false,
-  hardMode = false
-}) => {
-  const bottomRef = useRef<HTMLDivElement>(null);
-
-  // Auto scroll to bottom as ladder grows
+export const LadderBoard: React.FC<LadderBoardProps> = ({ startWord, targetWord, history, currentInput, isWon, disabled = false, par, errorMessage, isShaking, onSelectWordDefinition, onRewindToStep, onInputChange, onSubmitWord, showDeadEndRadar = true, isDeadEnd = false, hardMode = false }) => {
+  const activeRowRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // Keep new steps visible within the ladder without moving the whole page.
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  }, [history.length, currentInput]);
+    if (scrollRef.current && activeRowRef.current) {
+      const container = scrollRef.current;
+      const row = activeRowRef.current;
+      container.scrollTop = Math.max(0, row.offsetTop - container.clientHeight + row.clientHeight + 12);
+    }
+  }, [history.length]);
 
-  const currentStepCount = history.length;
-  const isOverPar = currentStepCount > par;
+  const tiles = (word: string, kind: string, changedIndex?: number | null) => <div className="letter-row" aria-label={word}>{word.split('').map((char, idx) => <span key={idx} className={`letter-tile ${kind} ${changedIndex === idx ? 'changed' : ''}`}>{char}</span>)}</div>;
+  const definition = (word: string) => <button onClick={() => onSelectWordDefinition(word, getWordDefinition(word))} title={`Definition of ${word}`} aria-label={`Definition of ${word}`}><Info size={14} /></button>;
 
   return (
-    <div className="w-full max-w-md mx-auto px-4 py-2 flex flex-col items-center">
-      {/* Top Par and Steps Metric Bar */}
-      <div className="w-full flex items-center justify-between mb-3 px-3 py-2 bg-theme-bg-secondary border border-theme-border/60 rounded-xl text-xs sm:text-sm font-semibold shadow-sm">
-        <div className="flex items-center gap-1.5">
-          <span className="text-theme-text-muted">Par:</span>
-          <span className="px-2 py-0.5 rounded-md bg-theme-accent/15 text-theme-accent border border-theme-accent/30 font-black">
-            {par} steps
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <span className="text-theme-text-muted">Steps Taken:</span>
-          <span className={`px-2 py-0.5 rounded-md font-bold transition-colors ${
-            isOverPar
-              ? 'bg-rose-500/20 text-rose-500 border border-rose-500/30'
-              : 'bg-emerald-500/20 text-emerald-500 border border-emerald-500/30'
-          }`}>
-            {currentStepCount}
-          </span>
-        </div>
-
-        {/* Dead End Warning Radar */}
-        {showDeadEndRadar && !isWon && (
-          <div className="flex items-center gap-1">
-            {isDeadEnd ? (
-              <span className="flex items-center gap-1 text-[11px] font-bold text-rose-500 animate-pulse">
-                <AlertTriangle className="w-3.5 h-3.5" />
-                Dead End
-              </span>
-            ) : (
-              <span className="flex items-center gap-1 text-[11px] font-bold text-emerald-500">
-                <CheckCircle2 className="w-3.5 h-3.5" />
-                Solvable
-              </span>
-            )}
-          </div>
-        )}
+    <div className="w-full mx-auto">
+      <div className="board-metrics">
+        <span>YOUR MOVES<strong>{history.length.toString().padStart(2, '0')}</strong></span>
+        <span>PAR<strong>{par} moves</strong></span>
+        {showDeadEndRadar && <span className={`inline-flex items-center gap-1 ${isDeadEnd ? 'text-rose-600' : 'text-theme-accent'}`}>{isDeadEnd ? <AlertCircle size={12} /> : <Check size={12} />}{isWon ? 'Complete' : isDeadEnd ? 'Dead end' : 'Path possible'}</span>}
       </div>
-
-      {/* Ladder Column */}
-      <div className="w-full space-y-2 max-h-[46vh] sm:max-h-[50vh] overflow-y-auto px-1 py-1 custom-scrollbar">
-        {/* Row 0: Start Word */}
-        <div className="flex items-center justify-between gap-2 p-1 rounded-xl bg-theme-bg-secondary/70 border border-theme-border/60">
-          <div className="w-12 text-center text-[10px] sm:text-xs font-black text-theme-accent uppercase tracking-wider">
-            START
+      <div className="ladder-scroll relative" ref={scrollRef} role="log" aria-label="Your word ladder" aria-live="polite" aria-relevant="additions">
+        <div className="ladder-row"><span className="row-label">Start</span>{tiles(startWord, 'start')}<div className="row-actions">{definition(startWord)}</div></div>
+        {history.map((step, index) => <div key={index} className="ladder-row animate-pop"><span className="row-label">{String(index + 1).padStart(2, '0')}</span>{tiles(step.word, '', step.changedIndex)}<div className="row-actions">{definition(step.word)}{!hardMode && !disabled && index < history.length - 1 && <button onClick={() => onRewindToStep?.(index)} aria-label={`Rewind to ${step.word}`} title={`Rewind to ${step.word}`}><RotateCcw size={12} /></button>}</div></div>)}
+        {!isWon && !disabled && <div ref={activeRowRef} className={`ladder-row ${isShaking ? 'animate-shake' : ''}`}>
+          <span className="row-label text-theme-accent">Next</span>
+          <div className="word-entry relative min-w-0">
+            <div className="letter-row" aria-hidden="true">{[0,1,2,3].map(idx => <span key={idx} className={`letter-tile ${currentInput[idx] ? 'active' : ''} ${currentInput.length === idx ? 'cursor' : ''}`}>{currentInput[idx] || ''}</span>)}</div>
+            <input className="absolute inset-0 w-full h-full opacity-0 cursor-text" aria-label="Next word" aria-describedby="input-helper" aria-invalid={Boolean(errorMessage)} value={currentInput} onChange={e => onInputChange(e.target.value.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4))} onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing && !e.repeat) { e.preventDefault(); e.stopPropagation(); onSubmitWord(); } }} maxLength={4} autoComplete="off" autoCapitalize="characters" autoCorrect="off" spellCheck={false} inputMode="text" />
           </div>
-          <div className="flex gap-1.5 sm:gap-2">
-            {startWord.split('').map((char, idx) => (
-              <div
-                key={idx}
-                className="w-11 h-12 sm:w-13 sm:h-14 flex items-center justify-center font-display font-black text-xl sm:text-2xl rounded-xl bg-theme-tile-start-bg text-theme-tile-start-text shadow-sm border-2 border-theme-tile-start-border select-none"
-              >
-                {char}
-              </div>
-            ))}
-          </div>
-          <button
-            onClick={() => {
-              soundFx.playKey();
-              onSelectWordDefinition(startWord, getWordDefinition(startWord));
-            }}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-secondary transition-colors btn-press"
-            title="View definition"
-          >
-            <HelpCircle className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* History Steps */}
-        {history.map((step, stepIndex) => {
-          const isTarget = step.word === targetWord;
-          return (
-            <div
-              key={stepIndex}
-              className={`flex items-center justify-between gap-2 p-1 rounded-xl transition-all animate-pop ${
-                isTarget
-                  ? 'bg-theme-tile-correct-bg/20 border-2 border-theme-tile-correct-border glow-theme'
-                  : 'bg-theme-bg-card border border-theme-border/60 shadow-sm'
-              }`}
-            >
-              <div className="w-12 text-center text-xs font-bold text-theme-text-muted">
-                #{stepIndex + 1}
-              </div>
-
-              <div className="flex gap-1.5 sm:gap-2">
-                {step.word.split('').map((char, charIdx) => {
-                  const isChanged = step.changedIndex === charIdx;
-                  return (
-                    <div
-                      key={charIdx}
-                      className={`w-11 h-12 sm:w-13 sm:h-14 flex items-center justify-center font-display font-black text-xl sm:text-2xl rounded-xl shadow-sm border-2 transition-all select-none ${
-                        isTarget
-                          ? 'bg-theme-tile-correct-bg text-theme-tile-correct-text border-theme-tile-correct-border glow-theme'
-                          : isChanged
-                          ? 'bg-theme-tile-diff-bg text-theme-tile-diff-text border-theme-tile-diff-border scale-105 shadow-md'
-                          : 'bg-theme-tile-empty text-theme-tile-empty-text border-theme-tile-border'
-                      }`}
-                    >
-                      {char}
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div className="flex items-center gap-0.5">
-                <button
-                  onClick={() => {
-                    soundFx.playKey();
-                    onSelectWordDefinition(step.word, getWordDefinition(step.word));
-                  }}
-                  className="w-7 h-7 flex items-center justify-center rounded-lg text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-secondary transition-colors btn-press"
-                  title="View definition"
-                >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                </button>
-
-                {!hardMode && !isWon && onRewindToStep && stepIndex < history.length - 1 && (
-                  <button
-                    onClick={() => {
-                      soundFx.playUndo();
-                      onRewindToStep(stepIndex);
-                    }}
-                    className="w-7 h-7 flex items-center justify-center rounded-lg text-theme-text-muted hover:text-rose-500 hover:bg-rose-500/10 transition-colors btn-press"
-                    title="Rewind back to this step"
-                  >
-                    <RotateCcw className="w-3.5 h-3.5" />
-                  </button>
-                )}
-              </div>
-            </div>
-          );
-        })}
-
-        {/* Current Active Typing Row (if not yet won) */}
-        {!isWon && (
-          <div
-            className={`flex items-center justify-between gap-2 p-1 rounded-xl bg-theme-bg-secondary/40 border-2 border-dashed border-theme-accent/60 ${
-              isShaking ? 'animate-shake border-rose-500 bg-rose-500/10' : ''
-            }`}
-          >
-            <div className="w-12 text-center text-xs font-bold text-theme-accent animate-pulse">
-              #{history.length + 1}
-            </div>
-
-            <div className="flex gap-1.5 sm:gap-2">
-              {[0, 1, 2, 3].map(idx => {
-                const char = currentInput[idx] || '';
-                const isCurrentCursor = currentInput.length === idx;
-                return (
-                  <div
-                    key={idx}
-                    className={`w-11 h-12 sm:w-13 sm:h-14 flex items-center justify-center font-display font-black text-xl sm:text-2xl rounded-xl border-2 transition-all select-none ${
-                      char
-                        ? 'bg-theme-tile-active-bg text-theme-tile-active-text border-theme-tile-active-border scale-100'
-                        : isCurrentCursor
-                        ? 'bg-theme-bg-card border-theme-accent ring-2 ring-theme-accent/30 scale-105 animate-pulse'
-                        : 'bg-theme-bg-card/40 border-theme-border/40'
-                    }`}
-                  >
-                    {char}
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="w-7 h-7" />
-          </div>
-        )}
-
-        {/* Target Row at Bottom (Goal POOP) */}
-        {!isWon && (
-          <div className="flex items-center justify-between gap-2 p-1 rounded-xl bg-theme-bg-secondary/30 border border-dashed border-theme-border/60 opacity-85">
-            <div className="w-12 text-center text-[10px] sm:text-xs font-black text-theme-accent flex items-center justify-center gap-0.5 uppercase tracking-wider">
-              <Lock className="w-3 h-3 inline text-theme-accent" />
-              GOAL
-            </div>
-            <div className="flex gap-1.5 sm:gap-2">
-              {targetWord.split('').map((char, idx) => (
-                <div
-                  key={idx}
-                  className="w-11 h-12 sm:w-13 sm:h-14 flex items-center justify-center font-display font-black text-xl sm:text-2xl rounded-xl bg-theme-bg-secondary/50 text-theme-text-muted border-2 border-dashed border-theme-border/60 select-none"
-                >
-                  {char}
-                </div>
-              ))}
-            </div>
-            <div className="w-7 h-7" />
-          </div>
-        )}
-
-        <div ref={bottomRef} />
+          <div />
+        </div>}
+        {!isWon && <div className="ladder-row mt-4"><span className="row-label inline-flex items-center gap-1"><Lock size={9} /> Goal</span>{tiles(targetWord, 'goal')}<div /></div>}
       </div>
-
-      {/* Error Message Toast */}
-      {errorMessage && (
-        <div className="mt-2 px-3 py-1.5 rounded-xl bg-rose-500 text-white text-xs font-bold shadow-lg shadow-rose-500/30 flex items-center gap-1.5 animate-bounceShort">
-          <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-          <span>{errorMessage}</span>
-        </div>
-      )}
+      <div id="input-helper" className="input-helper" role={errorMessage ? 'alert' : 'status'}>{errorMessage ? <span className="inline-flex gap-1.5 items-center text-rose-600"><AlertCircle size={12} />{errorMessage}</span> : isWon ? 'Nicely done. You found your way!' : disabled ? 'Your next word adventure is ready when you are.' : currentInput.length === 4 ? 'Looking good? Press Enter to try your word.' : 'Type a four-letter word, changing just one letter.'}</div>
     </div>
   );
 };

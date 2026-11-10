@@ -1,9 +1,10 @@
 import React from 'react';
 import { GameSettings, ThemeId, SoundProfile, KeyboardLayout } from '../types/game';
-import { Settings, Volume2, Palette, Keyboard, ShieldAlert, X, Check, Sparkles, RotateCcw, BarChart3 } from 'lucide-react';
+import { Settings, Volume2, Palette, Keyboard, ShieldAlert, X, Check, Sparkles, RotateCcw } from 'lucide-react';
 import { soundFx } from '../services/audio';
 import { applyTheme } from '../services/theme';
 import { DEFAULT_SETTINGS } from '../services/storage';
+import { Modal } from './Modal';
 
 interface SettingsModalProps {
   settings: GameSettings;
@@ -15,8 +16,7 @@ interface SettingsModalProps {
 export const SettingsModal: React.FC<SettingsModalProps> = ({
   settings,
   onUpdateSettings,
-  onClose,
-  onOpenSiteAnalytics
+  onClose
 }) => {
   const themes: Array<{
     id: ThemeId;
@@ -28,11 +28,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   }> = [
     {
       id: 'classic',
-      name: 'Porcelain White',
+      name: 'Porcelain',
       icon: '🧻',
-      desc: 'Clean porcelain & warm gold',
-      swatches: ['#fffdf9', '#d97706', '#fcd34d'],
-      cardClass: 'bg-[#fffdf9] text-[#451a03] border-[#fde68a]'
+      desc: 'Warm paper & forest green',
+      swatches: ['#f7f8f2', '#315e42', '#dce8d5'],
+      cardClass: 'bg-[#f7f8f2] text-[#203c2c] border-[#dce8d5]'
     },
     {
       id: 'poop',
@@ -78,7 +78,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const soundProfiles: Array<{ id: SoundProfile; name: string }> = [
     { id: 'cartoon', name: 'Cartoon & Squeaks' },
-    { id: 'arcade', name: '8-Bit Arcade Chiptune' },
+    { id: 'arcade', name: 'Arcade' },
     { id: 'clean', name: 'Clean Modern Click' }
   ];
 
@@ -108,8 +108,8 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-pop">
-      <div className="w-full max-w-md bg-theme-modal text-theme-text-primary rounded-3xl shadow-2xl border border-theme-border overflow-hidden flex flex-col max-h-[90vh]">
+    <Modal label="Game settings" onClose={onClose}>
+      <div className="w-full max-w-md bg-theme-modal text-theme-text-primary rounded-3xl shadow-2xl border border-theme-border overflow-hidden flex flex-col max-h-[90dvh]">
         {/* Header */}
         <div className="p-4 border-b border-theme-border/60 flex items-center justify-between bg-theme-modal-subcard">
           <h2 className="text-lg font-display font-black text-theme-text-primary flex items-center gap-2">
@@ -123,6 +123,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             }}
             className="p-1.5 rounded-xl text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-secondary btn-press"
             title="Close (Esc)"
+            aria-label="Close settings"
           >
             <X className="w-5 h-5" />
           </button>
@@ -135,7 +136,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-bold text-theme-text-primary flex items-center gap-1.5">
                 <Palette className="w-4 h-4 text-theme-accent" />
-                Theme & Aesthetic
+                Appearance
               </label>
               <span className="text-[11px] font-bold text-theme-accent">
                 {currentThemeObj.name}
@@ -148,14 +149,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                 return (
                   <button
                     key={t.id}
+                    aria-pressed={isSelected}
+                    title={t.desc}
                     onClick={() => {
                       soundFx.playKey();
                       update({ theme: t.id });
                     }}
                     className={`p-2.5 rounded-2xl border-2 text-left transition-all btn-press relative overflow-hidden ${t.cardClass} ${
                       isSelected
-                        ? 'ring-2 ring-theme-accent border-theme-accent shadow-md scale-102 font-black'
-                        : 'opacity-75 hover:opacity-100 hover:scale-101 border-transparent'
+                        ? 'ring-2 ring-theme-accent border-theme-accent shadow-md font-black'
+                        : 'opacity-90 hover:opacity-100 border-transparent'
                     }`}
                   >
                     {/* Active Checkmark Pill */}
@@ -188,7 +191,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               <div className="flex items-center justify-between text-xs font-bold mb-2">
                 <span className="text-theme-text-primary flex items-center gap-1.5">
                   <Sparkles className="w-3.5 h-3.5 text-theme-accent" />
-                  Realtime Aesthetic Preview
+                  Theme preview
                 </span>
                 <span className="text-[10px] text-theme-text-muted font-mono uppercase bg-theme-bg-card px-1.5 py-0.5 rounded border border-theme-border/50">
                   {currentThemeObj.name}
@@ -237,6 +240,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </label>
               <input
                 type="checkbox"
+                aria-label="Sound effects"
                 checked={settings.soundEnabled}
                 onChange={e => {
                   const enabled = e.target.checked;
@@ -257,6 +261,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                   </div>
                   <input
                     type="range"
+                    aria-label="Sound volume"
                     min="0"
                     max="1"
                     step="0.05"
@@ -275,6 +280,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
                     {soundProfiles.map(p => (
                       <button
                         key={p.id}
+                        aria-pressed={settings.soundProfile === p.id}
                         onClick={() => {
                           update({ soundProfile: p.id });
                           setTimeout(() => soundFx.playKey(), 50);
@@ -304,6 +310,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               {keyboardLayouts.map(k => (
                 <button
                   key={k.id}
+                  aria-pressed={settings.keyboardLayout === k.id}
                   onClick={() => {
                     soundFx.playKey();
                     update({ keyboardLayout: k.id });
@@ -326,10 +333,11 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             <div className="flex items-center justify-between">
               <div>
                 <div className="font-bold text-theme-text-primary">Dead End Radar</div>
-                <div className="text-[11px] text-theme-text-muted">Alerts if current word has no path to POOP</div>
+                <div className="text-[11px] text-theme-text-muted">Alerts when your target cannot be reached</div>
               </div>
               <input
                 type="checkbox"
+                aria-label="Dead end radar"
                 checked={settings.showDeadEndRadar}
                 onChange={e => {
                   soundFx.playKey();
@@ -350,6 +358,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               </div>
               <input
                 type="checkbox"
+                aria-label="Hard mode, no undo"
                 checked={settings.hardMode}
                 onChange={e => {
                   soundFx.playKey();
@@ -360,37 +369,22 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             </div>
           </div>
 
-          {/* Site Analytics Admin Section */}
-          {onOpenSiteAnalytics && (
-            <div className="p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 flex items-center justify-between gap-3">
-              <div>
-                <div className="font-bold text-xs text-theme-text-primary flex items-center gap-1.5">
-                  <BarChart3 className="w-4 h-4 text-theme-accent" />
-                  Site & Traffic Analytics
-                  <span className="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-600 dark:text-amber-400">
-                    Admin
-                  </span>
-                </div>
-                <div className="text-[11px] text-theme-text-muted mt-0.5">
-                  View unique visitors, active time spent, devices & traffic referrers
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  soundFx.playKey();
-                  onClose();
-                  onOpenSiteAnalytics();
-                }}
-                className="shrink-0 px-3 py-1.5 rounded-xl bg-theme-accent text-theme-accent-text font-bold text-xs shadow hover:opacity-90 transition-opacity btn-press"
-              >
-                Open Dashboard
-              </button>
-            </div>
-          )}
+          <div className="space-y-4 p-3 rounded-2xl bg-theme-modal-subcard border border-theme-modal-subcard-border">
+            <h3 className="text-xs font-bold text-theme-text-primary">Comfort & accessibility</h3>
+            {[
+              { key: 'reduceMotion' as const, title: 'Reduce motion', description: 'Use a calmer interface without animations' },
+              { key: 'highContrast' as const, title: 'Higher contrast', description: 'Make borders and focus indicators clearer' },
+              { key: 'hapticsEnabled' as const, title: 'Keyboard vibration', description: 'Gentle taps on supported mobile devices' }
+            ].map(option => (
+              <label key={option.key} className="flex items-center justify-between gap-4 cursor-pointer">
+                <span><span className="block text-xs font-bold text-theme-text-primary">{option.title}</span><span className="block text-[11px] text-theme-text-muted mt-1">{option.description}</span></span>
+                <input type="checkbox" aria-label={option.title} checked={settings[option.key]} onChange={event => update({ [option.key]: event.target.checked })} className="w-5 h-5 shrink-0 accent-theme-accent rounded cursor-pointer" />
+              </label>
+            ))}
+          </div>
         </div>
 
-        {/* Modal Footer with Save & Close */}
+        {/* Modal Footer with Done */}
         <div className="p-4 bg-theme-modal-subcard border-t border-theme-border/60 flex items-center justify-between gap-3">
           <button
             onClick={handleResetDefaults}
@@ -409,10 +403,10 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
             className="flex-1 max-w-[200px] py-2.5 px-4 rounded-xl bg-theme-accent hover:bg-theme-accent-hover text-theme-accent-text font-display font-black text-sm shadow-md flex items-center justify-center gap-2 btn-press"
           >
             <Check className="w-4 h-4" />
-            <span>Save & Close</span>
+            <span>Done</span>
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };

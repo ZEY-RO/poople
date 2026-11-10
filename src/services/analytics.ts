@@ -13,7 +13,7 @@
  * - Transparent offline / local cache fallback in localStorage so tracking works immediately
  */
 
-import { createClient } from '@supabase/supabase-js';
+import { supabase, isRemoteConfigured, remoteConfig } from './supabase';
 import { GameMode } from '../types/game';
 
 // Configuration & Keys
@@ -22,27 +22,8 @@ const SESSION_KEY = 'poople_session_id';
 const SESSION_START_KEY = 'poople_session_start';
 const LOCAL_ANALYTICS_KEY = 'poople_analytics_local_store';
 
-function sanitizeUrl(raw: string): string {
-  let url = (raw || '').trim();
-  url = url.replace(/\/+$/, '');
-  url = url.replace(/\/rest\/v1\/?$/, '');
-  return url.replace(/\/+$/, '');
-}
-
-const RAW_SUPABASE_URL = (import.meta.env.VITE_SUPABASE_URL || '').trim();
-const SUPABASE_URL = sanitizeUrl(RAW_SUPABASE_URL);
-const SUPABASE_KEY = (
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-  import.meta.env.VITE_SUPABASE_KEY ||
-  import.meta.env.VITE_SUPABASE_ANON_KEY ||
-  ''
-).trim();
-
-export const isSupabaseConfigured = Boolean(SUPABASE_URL && SUPABASE_KEY);
-
-const supabase = isSupabaseConfigured
-  ? createClient(SUPABASE_URL, SUPABASE_KEY)
-  : null;
+export const isSupabaseConfigured = isRemoteConfigured;
+const { url: SUPABASE_URL, key: SUPABASE_KEY } = remoteConfig;
 
 export interface ClientMetadata {
   deviceType: 'mobile' | 'tablet' | 'desktop';
@@ -176,7 +157,8 @@ class AnalyticsEngine {
   private isWindowFocused: boolean = true;
   private activeSecondsInSession: number = 0;
   private lastActiveTimestamp: number = Date.now();
-  private heartbeatIntervalId: any = null;
+  private heartbeatIntervalId: ReturnType<typeof setInterval> | null = null;
+  private listenerController: AbortController | null = null;
 
   // Session activity
   private modesPlayed: Set<string> = new Set();
@@ -232,7 +214,7 @@ class AnalyticsEngine {
         this.sessionId = currentSessionId;
         // Estimate already elapsed active seconds in current tab session
         const storedElapsed = parseInt(sessionStorage.getItem('poople_session_active_seconds') || '0', 10);
-        this.activeSecondsInSession = Math.max(0, storedElapsed);
+        this.activeSecondsInSession = Number.isFinite(storedElapsed) ? Math.max(0, storedElapsed) : 0;
       }
     } catch {
       this.sessionId = generateUUID();
@@ -243,6 +225,8 @@ class AnalyticsEngine {
     this.isTabVisible = document.visibilityState === 'visible';
     this.isWindowFocused = document.hasFocus();
     this.lastActiveTimestamp = Date.now();
+    this.listenerController = new AbortController();
+    const listenerOptions = { signal: this.listenerController.signal };
 
     const updateActiveDelta = () => {
       const now = Date.now();
@@ -269,19 +253,19 @@ class AnalyticsEngine {
         // Tab went to background, trigger sync beacon
         this.flushHeartbeat();
       }
-    });
+    }, listenerOptions);
 
     // Window focus / blur
     window.addEventListener('focus', () => {
       updateActiveDelta();
       this.isWindowFocused = true;
       this.lastActiveTimestamp = Date.now();
-    });
+    }, listenerOptions);
 
     window.addEventListener('blur', () => {
       updateActiveDelta();
       this.isWindowFocused = false;
-    });
+    }, listenerOptions);
 
     // Heartbeat every 25 seconds
     this.heartbeatIntervalId = setInterval(() => {
@@ -293,23 +277,23 @@ class AnalyticsEngine {
     window.addEventListener('pagehide', () => {
       updateActiveDelta();
       this.sendExitBeacon();
-    });
+    }, listenerOptions);
 
     window.addEventListener('beforeunload', () => {
       updateActiveDelta();
       this.sendExitBeacon();
-    });
+    }, listenerOptions);
   }
 
   // Periodic heartbeat sync to Supabase and LocalStorage
   private async flushHeartbeat() {
     this.updateLocalCache();
 
-    if (!isSupabaseConfigured || !supabase) return;
+    if (!isSupabaseConfigured || !supabase || this.tablesVerified !== true) return;
 
     try {
       // Update session duration
-      await supabase
+      const { error: sessionError } = await supabase
         .from('analytics_sessions')
         .update({
           duration_seconds: this.activeSecondsInSession,
@@ -322,9 +306,10 @@ class AnalyticsEngine {
           updated_at: new Date().toISOString(),
         })
         .eq('id', this.sessionId);
+      if (sessionError) { this.tablesVerified = false; return; }
 
       // Update visitor's last seen and total time
-      await supabase
+      const { error: visitorError } = await supabase
         .from('analytics_visitors')
         .update({
           last_seen_at: new Date().toISOString(),
@@ -332,8 +317,9 @@ class AnalyticsEngine {
           updated_at: new Date().toISOString(),
         })
         .eq('id', this.visitorId);
+      if (visitorError) this.tablesVerified = false;
     } catch {
-      // Graceful silence if network or table issue
+      this.tablesVerified = false;
     }
   }
 
@@ -341,7 +327,7 @@ class AnalyticsEngine {
   private sendExitBeacon() {
     this.updateLocalCache();
 
-    if (!SUPABASE_URL || !SUPABASE_KEY) return;
+    if (!isSupabaseConfigured || this.tablesVerified !== true || !SUPABASE_URL || !SUPABASE_KEY) return;
 
     const sessionEndpoint = `${SUPABASE_URL}/rest/v1/analytics_sessions?id=eq.${encodeURIComponent(this.sessionId)}`;
     const payload = JSON.stringify({
@@ -404,13 +390,9 @@ class AnalyticsEngine {
         .upsert(visitorPayload, { onConflict: 'id' });
 
       if (visitorError) {
-        if (visitorError.code === 'PGRST205') {
-          this.tablesVerified = false;
-        }
+        this.tablesVerified = false;
         return;
       }
-
-      this.tablesVerified = true;
 
       // 2. Insert Session
       const sessionPayload = {
@@ -431,9 +413,11 @@ class AnalyticsEngine {
         is_bounce: true,
       };
 
-      await supabase
+      const { error: sessionError } = await supabase
         .from('analytics_sessions')
         .upsert(sessionPayload, { onConflict: 'id' });
+      if (sessionError) { this.tablesVerified = false; return; }
+      this.tablesVerified = true;
 
       // 3. Insert Initial Pageview Event
       await this.trackEvent('page_view', {
@@ -463,7 +447,7 @@ class AnalyticsEngine {
         firstSeen: localStorage.getItem('poople_visitor_first_seen') || new Date().toISOString(),
         lastSeen: new Date().toISOString(),
         totalVisits: parseInt(localStorage.getItem('poople_visitor_visits') || '1', 10),
-        totalSeconds: (local.visitors[this.visitorId]?.totalSeconds || 0) + 1,
+        totalSeconds: this.activeSecondsInSession,
         metadata: this.metadata,
       };
 
@@ -478,35 +462,21 @@ class AnalyticsEngine {
         gamesWon: this.gamesWonCount,
       };
 
-      // Day record
-      if (!local.days[today]) {
-        local.days[today] = { visitors: new Set(), sessions: 0, totalDuration: 0 };
+      const days: Record<string, { visitors: Set<string>; sessions: number; totalDuration: number }> = {};
+      for (const session of Object.values(local.sessions) as any[]) {
+        if (!session || typeof session.date !== 'string') continue;
+        const day = days[session.date] ||= { visitors: new Set(), sessions: 0, totalDuration: 0 };
+        day.visitors.add(session.visitorId);
+        day.sessions++;
+        day.totalDuration += Number.isFinite(session.duration) ? session.duration : 0;
       }
-      const dayRec = local.days[today];
-      if (Array.isArray(dayRec.visitors)) {
-        dayRec.visitors = new Set(dayRec.visitors);
-      }
-      dayRec.visitors.add(this.visitorId);
-      dayRec.sessions = Object.values(local.sessions).filter((s: any) => s.date === today).length;
-      dayRec.totalDuration = Object.values(local.sessions)
-        .filter((s: any) => s.date === today)
-        .reduce((sum: number, s: any) => sum + (s.duration || 0), 0);
-
-      // Serialize set to array
-      const serializableDays: Record<string, any> = {};
-      Object.keys(local.days).forEach((d) => {
-        const entry = local.days[d];
-        serializableDays[d] = {
-          visitorsCount: entry.visitors instanceof Set ? entry.visitors.size : (entry.visitorsCount || 1),
-          sessions: entry.sessions || 1,
-          totalDuration: entry.totalDuration || 0,
-        };
-      });
-
+      const serializableDays = Object.fromEntries(Object.entries(days).map(([date, day]) => [date, {
+        visitorsCount: day.visitors.size,
+        sessions: day.sessions,
+        totalDuration: day.totalDuration
+      }]));
       localStorage.setItem(LOCAL_ANALYTICS_KEY, JSON.stringify({
-        visitors: local.visitors,
-        sessions: local.sessions,
-        days: serializableDays,
+        visitors: local.visitors, sessions: local.sessions, days: serializableDays
       }));
     } catch {}
   }
@@ -516,17 +486,18 @@ class AnalyticsEngine {
   public async trackEvent(eventName: string, properties: Record<string, any> = {}) {
     this.updateLocalCache();
 
-    if (!isSupabaseConfigured || !supabase || this.tablesVerified === false) return;
+    if (!isSupabaseConfigured || !supabase || this.tablesVerified !== true) return;
 
     try {
-      await supabase.from('analytics_events').insert({
+      const { error } = await supabase.from('analytics_events').insert({
         session_id: this.sessionId,
         visitor_id: this.visitorId,
         event_name: eventName,
         properties,
         created_at: new Date().toISOString(),
       });
-    } catch {}
+      if (error) this.tablesVerified = false;
+    } catch { this.tablesVerified = false; }
   }
 
   public trackModeSwitch(mode: GameMode) {
@@ -576,6 +547,9 @@ class AnalyticsEngine {
   }
 
   public destroy() {
+    this.listenerController?.abort();
+    this.listenerController = null;
+    this.isInitialized = false;
     if (this.heartbeatIntervalId) {
       clearInterval(this.heartbeatIntervalId);
       this.heartbeatIntervalId = null;
@@ -587,7 +561,7 @@ class AnalyticsEngine {
   public async fetchAnalyticsSummary(): Promise<AnalyticsSummary> {
     const fallbackSummary = this.computeLocalSummary();
 
-    if (!isSupabaseConfigured || !supabase) {
+    if (!isSupabaseConfigured || !supabase || this.tablesVerified === false) {
       return { ...fallbackSummary, isUsingSupabase: false, tablesExist: false };
     }
 
@@ -598,6 +572,7 @@ class AnalyticsEngine {
         .select('*', { count: 'exact', head: true });
 
       if (vErr) {
+        this.tablesVerified = false;
         return { ...fallbackSummary, isUsingSupabase: true, tablesExist: false };
       }
 
@@ -707,7 +682,7 @@ class AnalyticsEngine {
         totalSessions,
         totalDurationSeconds,
         avgDurationSeconds,
-        activeNow: 1, // augmented in UI by live player counter
+        activeNow: 0, // Realtime presence is supplied separately by the dashboard.
         newVisitorsCount,
         returningVisitorsCount,
         deviceBreakdown,
@@ -735,7 +710,7 @@ class AnalyticsEngine {
       const totalVisitors = Math.max(1, visitors.length);
       const totalSessions = Math.max(1, sessions.length);
 
-      const totalDuration = sessions.reduce((acc, s) => acc + (s.duration || 0), 0) + this.activeSecondsInSession;
+      const totalDuration = sessions.reduce((acc, s) => acc + (s.id === this.sessionId ? this.activeSecondsInSession : (s.duration || 0)), 0);
       const avgDuration = Math.round(totalDuration / totalSessions);
 
       const deviceBreakdown = { mobile: 0, desktop: 0, tablet: 0 };
@@ -750,10 +725,10 @@ class AnalyticsEngine {
         if (deviceBreakdown[dev] !== undefined) deviceBreakdown[dev]++;
         else deviceBreakdown.desktop++;
 
-        const br = meta.browser || 'Chrome';
+        const br = meta.browser || 'Unknown';
         browserCounts[br] = (browserCounts[br] || 0) + 1;
 
-        const os = meta.os || 'macOS';
+        const os = meta.os || 'Unknown';
         osCounts[os] = (osCounts[os] || 0) + 1;
 
         const ref = meta.referrer || 'direct';
@@ -792,8 +767,8 @@ class AnalyticsEngine {
         totalDurationSeconds: totalDuration,
         avgDurationSeconds: avgDuration,
         activeNow: 1,
-        newVisitorsCount: totalVisitors > 1 ? totalVisitors - 1 : 1,
-        returningVisitorsCount: totalVisitors > 1 ? 1 : 0,
+        newVisitorsCount: visitors.filter(v => (v.totalVisits || 1) <= 1).length,
+        returningVisitorsCount: visitors.filter(v => (v.totalVisits || 1) > 1).length,
         deviceBreakdown,
         topBrowsers: Object.entries(browserCounts).map(([name, count]) => ({
           name,
@@ -825,8 +800,8 @@ class AnalyticsEngine {
         newVisitorsCount: 1,
         returningVisitorsCount: 0,
         deviceBreakdown: { mobile: 0, desktop: 1, tablet: 0 },
-        topBrowsers: [{ name: 'Chrome', count: 1, percentage: 100 }],
-        topOS: [{ name: 'macOS', count: 1, percentage: 100 }],
+        topBrowsers: [{ name: this.metadata.browser, count: 1, percentage: 100 }],
+        topOS: [{ name: this.metadata.os, count: 1, percentage: 100 }],
         topReferrers: [{ source: 'direct', count: 1, percentage: 100 }],
         modeBreakdown: { daily: 1, unlimited: 0, rush: 0, versus: 0, campaign: 0 },
         dailyVisits: [{ date: new Date().toISOString().slice(0, 10), visitors: 1, sessions: 1, avgDuration: 0 }],

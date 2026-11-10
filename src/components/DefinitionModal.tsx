@@ -1,6 +1,7 @@
 import React from 'react';
 import { BookOpen, X } from 'lucide-react';
 import { soundFx } from '../services/audio';
+import { Modal } from './Modal';
 
 interface DefinitionModalProps {
   word: string;
@@ -14,9 +15,10 @@ export const DefinitionModal: React.FC<DefinitionModalProps> = ({
   onClose
 }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-pop">
-      <div className="w-full max-w-sm bg-theme-modal text-theme-text-primary rounded-3xl shadow-2xl border border-theme-border overflow-hidden p-5 text-center relative">
+    <Modal label={`Definition of ${word}`} onClose={onClose}>
+      <div className="w-full max-w-sm mx-auto bg-theme-modal text-theme-text-primary rounded-3xl shadow-2xl border border-theme-border overflow-hidden p-5 text-center relative max-h-[90dvh] overflow-y-auto">
         <button
+          aria-label="Close definition"
           onClick={() => {
             soundFx.playKey();
             onClose();
@@ -51,6 +53,6 @@ export const DefinitionModal: React.FC<DefinitionModalProps> = ({
           Close
         </button>
       </div>
-    </div>
+    </Modal>
   );
 };

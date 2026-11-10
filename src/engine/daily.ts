@@ -52,10 +52,11 @@ export function getDailyPuzzle(dateKey: string = formatDateToKey()): {
 } {
   const hash = hashString(dateKey);
   const index = hash % VALID_DAILY_WORDS.length;
+  const fallbackPath = findShortestPath('FART', 'POOP')!;
   const puzzle = VALID_DAILY_WORDS[index] || {
     word: 'FART',
-    par: 4,
-    path: ['FART', 'FORT', 'PORT', 'POST', 'POOP']
+    par: fallbackPath.length - 1,
+    path: fallbackPath
   };
 
   return {

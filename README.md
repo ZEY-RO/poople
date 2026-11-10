@@ -50,6 +50,22 @@ npm run build
 npm run preview
 ```
 
+## Verification
+
+```bash
+npm test       # Engine, puzzle, storage, and optional-service regressions
+npm run build  # TypeScript and production bundle
+```
+
+For browser checks, start the local app and use Playwright CLI:
+
+```bash
+playwright-cli open http://localhost:5173
+playwright-cli run-code --filename=tests/ui-smoke.js
+```
+
+Use the port printed by Vite if 5173 is already in use. The browser checks use an isolated context and cover daily save/restore, archive links, keyboard input, dialogs, Rush expiration, bot rematches, campaign progression, and narrow mobile screens. Development analytics stay local; production can use the configured Supabase service.
+
 ---
 
 ## 📜 License

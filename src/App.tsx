@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { GameMode, Difficulty, Step, BotPersonality, BotState, CampaignStage } from './types/game';
-import { loadSettings, saveSettings, loadStats, recordDailyCompletion, saveCampaignStars, saveStats } from './services/storage';
+import { loadSettings, saveSettings, loadStats, recordDailyCompletion, saveCampaignStars, saveStats, loadDailyGameState, saveDailyGameState } from './services/storage';
 import { soundFx } from './services/audio';
 import { applyTheme } from './services/theme';
 import { isValidStep, findShortestPath, getPar, getRandomPuzzle, isDeadEnd } from './engine/solver';
@@ -24,6 +24,13 @@ import { CustomPuzzleModal } from './components/CustomPuzzleModal';
 import { DefinitionModal } from './components/DefinitionModal';
 import { SiteAnalyticsModal } from './components/SiteAnalyticsModal';
 import { analytics } from './services/analytics';
+import { ArrowRight, BookOpen, Flame, Lightbulb, Sparkles, CheckCircle2 } from 'lucide-react';
+
+function parseDailyDate(value: string | null): string | undefined {
+  if (!value || !/^\d{4}-\d{2}-\d{2}$/.test(value) || value > formatDateToKey()) return undefined;
+  const date = new Date(value);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === value ? value : undefined;
+}
 
 export const App: React.FC = () => {
   // Settings & Stats
@@ -45,6 +52,13 @@ export const App: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isShaking, setIsShaking] = useState<boolean>(false);
   const [startTime, setStartTime] = useState<number>(Date.now());
+
+  const [hintsUsed, setHintsUsed] = useState(0);
+  const [gameId, setGameId] = useState(0);
+  const [isGameReady, setIsGameReady] = useState(false);
+  const rushNextRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const rushDeadlineRef = useRef(0);
+  const rushActiveRef = useRef(false);
 
   // Daily Mode specifics
   const [dailyDateKey, setDailyDateKey] = useState<string>(formatDateToKey());
@@ -90,6 +104,8 @@ export const App: React.FC = () => {
   // Initialize theme class and audio config
   useEffect(() => {
     applyTheme(settings.theme);
+    document.documentElement.dataset.reduceMotion = String(settings.reduceMotion);
+    document.documentElement.dataset.highContrast = String(settings.highContrast);
     soundFx.setConfig(settings.soundEnabled, settings.soundVolume, settings.soundProfile);
   }, [settings]);
 
@@ -115,8 +131,12 @@ export const App: React.FC = () => {
   // Initialize game when mode or parameters change
   const startNewGame = useCallback((
     targetMode: GameMode = mode,
-    options?: { dateKey?: string; stage?: CampaignStage; customStart?: string; customTarget?: string; diff?: Difficulty }
+    options?: { dateKey?: string; stage?: CampaignStage; customStart?: string; customTarget?: string; diff?: Difficulty; bot?: BotPersonality; reset?: boolean }
   ) => {
+    if (rushNextRef.current) clearTimeout(rushNextRef.current);
+    setIsGameReady(true);
+    setGameId(id => id + 1);
+    setHintsUsed(0);
     setErrorMessage(null);
     setCurrentInput('');
     setHistory([]);
@@ -131,6 +151,10 @@ export const App: React.FC = () => {
 
     if (targetMode === 'daily') {
       const date = options?.dateKey || formatDateToKey();
+      const dailyUrl = new URL(window.location.href);
+      if (date === formatDateToKey()) dailyUrl.searchParams.delete('date');
+      else dailyUrl.searchParams.set('date', date);
+      window.history.replaceState({}, '', dailyUrl);
       const puzzle = getDailyPuzzle(date);
       setDailyDateKey(puzzle.date);
       setDailyDayNumber(puzzle.dayNumber);
@@ -138,6 +162,22 @@ export const App: React.FC = () => {
       setTargetWord('POOP');
       setPar(puzzle.par);
       setOptimalPath(puzzle.optimalPath);
+      const saved = !options?.reset ? loadDailyGameState<{ history: Step[]; currentInput: string; startTime: number; hintsUsed: number; status: string }>(date) : null;
+      if (saved && Array.isArray(saved.history)) {
+        let previous = puzzle.startWord;
+        const valid = saved.history.every(step => {
+          if (!step || typeof step.word !== 'string' || previous === 'POOP' || !isValidStep(previous, step.word).valid) return false;
+          previous = step.word;
+          return true;
+        });
+        if (valid) {
+          setHistory(saved.history);
+          setCurrentInput(typeof saved.currentInput === 'string' && /^[A-Z]{0,4}$/.test(saved.currentInput) ? saved.currentInput : '');
+          setStartTime(Number.isFinite(saved.startTime) && saved.startTime > 0 ? saved.startTime : Date.now());
+          setHintsUsed(Number.isFinite(saved.hintsUsed) ? saved.hintsUsed : 0);
+          setStatus(previous === 'POOP' ? 'won' : 'playing');
+        }
+      }
     } else if (targetMode === 'unlimited') {
       const diff = options?.diff || difficulty;
       let minSteps = 3;
@@ -166,7 +206,7 @@ export const App: React.FC = () => {
       setOptimalPath(puzzle.optimalPath);
 
       setBotState({
-        config: BOT_CONFIGS[selectedBot],
+        config: BOT_CONFIGS[options?.bot || selectedBot],
         currentWord: puzzle.startWord,
         history: [],
         status: 'thinking',
@@ -205,6 +245,7 @@ export const App: React.FC = () => {
       const cleanT = t.toUpperCase().trim();
       const path = findShortestPath(cleanS, cleanT);
       if (path && path.length > 1) {
+        setIsGameReady(true);
         setMode('custom');
         setStartWord(cleanS);
         setTargetWord(cleanT);
@@ -225,18 +266,27 @@ export const App: React.FC = () => {
         setRushScore(0);
         setRushCombo(1);
         setRushSolvedCount(0);
-        setIsRushPlaying(true);
+        setIsRushPlaying(false);
         startNewGame('rush');
+        setStatus('idle');
       } else {
-        startNewGame(modeParam);
+        const dateParam = params.get('date');
+        const dateKey = parseDailyDate(dateParam);
+        startNewGame(modeParam, modeParam === 'daily' ? { dateKey } : undefined);
       }
     } else {
-      startNewGame('daily');
+      const dateParam = params.get('date');
+      const dateKey = parseDailyDate(dateParam);
+      startNewGame('daily', { dateKey });
     }
   }, []);
 
   // Handle Mode Change
   const handleSelectMode = (newMode: GameMode) => {
+    if (rushNextRef.current) clearTimeout(rushNextRef.current);
+    rushActiveRef.current = false;
+    setIsRushPlaying(false);
+    setIsWinModalOpen(false);
     setMode(newMode);
     analytics.trackModeSwitch(newMode);
 
@@ -250,6 +300,7 @@ export const App: React.FC = () => {
       }
       url.searchParams.delete('start');
       url.searchParams.delete('target');
+      url.searchParams.delete('date');
       window.history.replaceState({}, '', url.toString());
     } catch {
       // Ignore in non-browser environments
@@ -262,8 +313,9 @@ export const App: React.FC = () => {
       setRushScore(0);
       setRushCombo(1);
       setRushSolvedCount(0);
-      setIsRushPlaying(true);
+      setIsRushPlaying(false);
       startNewGame('rush');
+      setStatus('idle');
     } else {
       startNewGame(newMode);
     }
@@ -273,17 +325,28 @@ export const App: React.FC = () => {
   const currentWord = history.length > 0 ? history[history.length - 1].word : startWord;
   const isCurrentDeadEnd = settings.showDeadEndRadar ? isDeadEnd(currentWord, targetWord) : false;
 
+  useEffect(() => {
+    if (isGameReady && mode === 'daily' && startWord === getDailyPuzzle(dailyDateKey).startWord) {
+      saveDailyGameState(dailyDateKey, { history, currentInput, startTime, hintsUsed, status });
+    }
+  }, [isGameReady, mode, dailyDateKey, startWord, history, currentInput, startTime, hintsUsed, status]);
+
+  useEffect(() => () => { if (rushNextRef.current) clearTimeout(rushNextRef.current); }, []);
+
+  const isAnyModalOpen = isWinModalOpen || isStatsOpen || isSettingsOpen || isTutorialOpen || isCustomModalOpen || isSiteAnalyticsOpen || selectedDefWord !== null;
+  const canPlay = isGameReady && status === 'playing' && !isAnyModalOpen && !(mode === 'campaign' && isViewingCampaignMap) && (mode !== 'rush' || (isRushPlaying && rushTimeLeft > 0));
+
   // Keyboard Actions
   const handleKeyPress = (letter: string) => {
-    if (status !== 'playing' || isWinModalOpen) return;
+    if (!canPlay) return;
     if (currentInput.length < 4) {
-      setCurrentInput(prev => prev + letter);
+      setCurrentInput(prev => (prev + letter.toUpperCase().replace(/[^A-Z]/g, '')).slice(0, 4));
       setErrorMessage(null);
     }
   };
 
   const handleDelete = () => {
-    if (status !== 'playing' || isWinModalOpen) return;
+    if (!canPlay) return;
     setCurrentInput(prev => prev.slice(0, -1));
     setErrorMessage(null);
   };
@@ -300,7 +363,7 @@ export const App: React.FC = () => {
 
   // Submit Step Handler
   const handleSubmit = () => {
-    if (status !== 'playing' || isWinModalOpen) return;
+    if (!canPlay || (mode === 'rush' && Date.now() >= rushDeadlineRef.current)) return;
 
     if (currentInput.length !== 4) {
       triggerError('Word must be 4 letters long.');
@@ -349,7 +412,7 @@ export const App: React.FC = () => {
         steps: finalHistory.length,
         par,
         won: true,
-        hintsUsed: 0,
+        hintsUsed,
         timeSeconds: timeSec
       });
       setStats(updated);
@@ -389,10 +452,10 @@ export const App: React.FC = () => {
       setRushSolvedCount(newCount);
       setRushCombo(newCombo);
 
-      if (newScore > stats.rushHighScore) {
+      if (newScore > stats.rushHighScore || newCount > stats.rushBestSolved) {
         const updated = {
           ...stats,
-          rushHighScore: newScore,
+          rushHighScore: Math.max(stats.rushHighScore, newScore),
           rushBestSolved: Math.max(stats.rushBestSolved, newCount)
         };
         saveStats(updated);
@@ -400,8 +463,8 @@ export const App: React.FC = () => {
       }
 
       // Next puzzle in Rush
-      setTimeout(() => {
-        startNewGame('rush');
+      rushNextRef.current = setTimeout(() => {
+        if (rushActiveRef.current && Date.now() < rushDeadlineRef.current) startNewGame('rush');
       }, 400);
     } else {
       setIsWinModalOpen(true);
@@ -426,103 +489,67 @@ export const App: React.FC = () => {
 
   // Restart ladder
   const handleRestart = () => {
+    if (mode === 'rush' && !isRushPlaying) return;
+    if (mode === 'versus') { startNewGame('versus'); return; }
+    setGameId(id => id + 1);
     setHistory([]);
     setCurrentInput('');
     setErrorMessage(null);
+    setStatus('playing');
+    setHintsUsed(0);
+    setStartTime(Date.now());
+    setIsWinModalOpen(false);
   };
 
-  // Rush Mode Timer Loop
+  // Use wall-clock time so background tabs and a skip penalty cannot extend a run.
   useEffect(() => {
-    let interval: ReturnType<typeof setInterval> | undefined;
-    if (mode === 'rush' && isRushPlaying && rushTimeLeft > 0) {
-      interval = setInterval(() => {
-        setRushTimeLeft(prev => {
-          if (prev <= 1) {
-            setIsRushPlaying(false);
-            soundFx.playFlush();
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
+    if (mode !== 'rush' || !isRushPlaying) return;
+    const tick = () => {
+      const remaining = Math.max(0, Math.ceil((rushDeadlineRef.current - Date.now()) / 1000));
+      setRushTimeLeft(remaining);
+      if (remaining === 0) {
+        rushActiveRef.current = false;
+        setIsRushPlaying(false);
+        setStatus('lost');
+        setCurrentInput('');
+        if (rushNextRef.current) clearTimeout(rushNextRef.current);
+        soundFx.playFlush();
+      }
+    };
+    tick();
+    const interval = setInterval(tick, 200);
     return () => clearInterval(interval);
-  }, [mode, isRushPlaying, rushTimeLeft]);
+  }, [mode, isRushPlaying]);
 
-  // Versus Bot Simulation Loop
-  const botTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // A new game ID invalidates the old bot timer, including same-opponent rematches.
   useEffect(() => {
-    if (mode !== 'versus' || status !== 'playing') {
-      if (botTimerRef.current) clearTimeout(botTimerRef.current);
-      return;
-    }
-
-    const scheduleBotStep = () => {
-      const delay = getRandomThinkDelay(selectedBot);
-      botTimerRef.current = setTimeout(() => {
-        setBotState(prev => {
-          if (prev.status === 'won' || status !== 'playing') return prev;
-
-          const move = getNextBotMove(prev.currentWord, targetWord, selectedBot);
-          if (!move) return prev;
-
-          const newHistory = [...prev.history, move.step];
-          const isBotWon = move.nextWord === targetWord;
-          const currentDistance = getPar(move.nextWord, targetWord);
-          const initialPar = Math.max(1, par);
-          const progress = Math.min(100, Math.round(((initialPar - Math.max(0, currentDistance)) / initialPar) * 100));
-
-          if (isBotWon) {
-            // Bot won the race!
-            soundFx.playInvalid();
-            setStatus('lost');
-            const updated = {
-              ...stats,
-              versusLosses: stats.versusLosses + 1
-            };
-            saveStats(updated);
-            setStats(updated);
-
-            return {
-              ...prev,
-              currentWord: move.nextWord,
-              history: newHistory,
-              status: 'won',
-              stepCount: newHistory.length,
-              progressPercent: 100
-            };
-          }
-
-          soundFx.playBotStep();
-          return {
-            ...prev,
-            currentWord: move.nextWord,
-            history: newHistory,
-            status: 'thinking',
-            stepCount: newHistory.length,
-            progressPercent: progress
-          };
+    if (mode !== 'versus' || status !== 'playing' || botState.status === 'won') return;
+    const timer = setTimeout(() => {
+      const personality = botState.config.id;
+      const move = getNextBotMove(botState.currentWord, targetWord, personality);
+      if (!move) return;
+      const nextHistory = [...botState.history, move.step];
+      const won = move.nextWord === targetWord;
+      const distance = getPar(move.nextWord, targetWord);
+      setBotState({ ...botState, currentWord: move.nextWord, history: nextHistory, status: won ? 'won' : 'thinking', stepCount: nextHistory.length, progressPercent: won ? 100 : Math.max(0, Math.min(100, Math.round((par - distance) / Math.max(1, par) * 100))) });
+      if (won) {
+        soundFx.playInvalid();
+        setStatus('lost');
+        setStats(previous => {
+          const updated = { ...previous, versusLosses: previous.versusLosses + 1 };
+          saveStats(updated);
+          return updated;
         });
-
-        // Schedule next step if still playing
-        if (status === 'playing') {
-          scheduleBotStep();
-        }
-      }, delay);
-    };
-
-    scheduleBotStep();
-
-    return () => {
-      if (botTimerRef.current) clearTimeout(botTimerRef.current);
-    };
-  }, [mode, status, selectedBot, targetWord, par]);
+      } else soundFx.playBotStep();
+    }, getRandomThinkDelay(botState.config.id));
+    return () => clearTimeout(timer);
+  }, [mode, status, botState, targetWord, par, gameId]);
 
   // Compute player progress percent for versus mode
   const currentDistToGoal = getPar(currentWord, targetWord);
   const playerProgress = currentDistToGoal >= 0
-    ? Math.min(100, Math.round(((par - Math.max(0, currentDistToGoal)) / Math.max(1, par)) * 100))
-    : 10;
+    ? Math.max(0, Math.min(100, Math.round(((par - Math.max(0, currentDistToGoal)) / Math.max(1, par)) * 100)))
+    : 0;
 
   // Next stage navigation in campaign
   const hasNextCampaignStage = mode === 'campaign' && currentCampaignStage !== null && currentCampaignStage.id < CAMPAIGN_STAGES.length;
@@ -535,7 +562,7 @@ export const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col justify-between max-w-lg mx-auto bg-theme-bg-primary text-theme-text-primary border-x border-theme-border/60 shadow-2xl transition-colors">
+    <div className="app-shell text-theme-text-primary">
       {/* Top Navigation Header */}
       <Header
         currentMode={mode}
@@ -554,8 +581,16 @@ export const App: React.FC = () => {
         }}
       />
 
-      {/* Main Mode View Area */}
-      <main className="flex-1 flex flex-col justify-between py-1">
+      <section className="page-intro" aria-labelledby="page-title">
+        <div><div className="eyebrow">Small steps. Big word energy.</div>
+          <h1 id="page-title">{{ daily: 'Your daily detour.', unlimited: 'Keep the good words rolling.', rush: 'Think fast. Flush faster.', versus: 'A little friendly competition.', campaign: 'Climb your way to the throne.', custom: 'Your words. Their challenge.' }[mode]}</h1>
+          <p>{mode === 'campaign' && isViewingCampaignMap ? 'Fifty puzzles, five chapters. Pick a stage and find your way up.' : mode === 'rush' && status === 'idle' ? 'Two minutes on the clock. How many ladders can you solve?' : <>Change one letter at a time. Find your way from {startWord} to {targetWord}.</>}</p>
+        </div>
+        <span className="intro-badge"><Sparkles size={13} /> A little challenge. A fresh perspective.</span>
+      </section>
+      <div className="workspace">
+      <div className="game-card">
+      <main className="game-main" aria-label="Word ladder game">
         {/* Mode Specific Sub-Headers */}
         {mode === 'daily' && (
           <DailyModeView
@@ -611,13 +646,24 @@ export const App: React.FC = () => {
               setRushScore(0);
               setRushCombo(1);
               setRushSolvedCount(0);
+              rushDeadlineRef.current = Date.now() + 120_000;
+              rushActiveRef.current = true;
               setIsRushPlaying(true);
               startNewGame('rush');
             }}
             onSkipWord={() => {
+              if (!rushActiveRef.current) return;
               setRushCombo(1);
-              setRushTimeLeft(prev => Math.max(0, prev - 5));
-              startNewGame('rush');
+              rushDeadlineRef.current -= 5000;
+              if (Date.now() >= rushDeadlineRef.current) {
+                rushActiveRef.current = false;
+                setRushTimeLeft(0);
+                setIsRushPlaying(false);
+                setStatus('lost');
+              } else {
+                setRushTimeLeft(Math.max(0, Math.ceil((rushDeadlineRef.current - Date.now()) / 1000)));
+                startNewGame('rush');
+              }
             }}
           />
         )}
@@ -627,7 +673,7 @@ export const App: React.FC = () => {
             selectedBot={selectedBot}
             onSelectBot={b => {
               setSelectedBot(b);
-              startNewGame('versus');
+              startNewGame('versus', { bot: b });
             }}
             botState={botState}
             playerStepCount={history.length}
@@ -661,6 +707,9 @@ export const App: React.FC = () => {
           />
         )}
 
+        {mode === 'campaign' && !isViewingCampaignMap && <div className="game-notice"><span>Stage {currentCampaignStage?.id}: {currentCampaignStage?.name}</span><button onClick={() => setIsViewingCampaignMap(true)}>All stages</button></div>}
+        {status === 'lost' && mode === 'versus' && <div className="game-notice" role="status"><span>The bot reached the goal. Ready for a rematch?</span><button onClick={() => startNewGame('versus')}>Try again</button></div>}
+        {status === 'won' && mode !== 'rush' && !(mode === 'campaign' && isViewingCampaignMap) && <div className="game-notice" role="status"><span className="inline-flex items-center gap-2"><CheckCircle2 size={16} /> Ladder complete in {history.length} steps.</span><button onClick={() => setIsWinModalOpen(true)}>View results</button></div>}
         {/* Central Ladder Board (shown when not looking at campaign level select) */}
         {(!isViewingCampaignMap || mode !== 'campaign') && (
           <>
@@ -670,6 +719,9 @@ export const App: React.FC = () => {
               history={history}
               currentInput={currentInput}
               isWon={status === 'won'}
+              disabled={status !== 'playing' || (mode === 'rush' && !isRushPlaying)}
+              onInputChange={value => { if (canPlay) { setCurrentInput(value); setErrorMessage(null); } }}
+              onSubmitWord={handleSubmit}
               par={par}
               errorMessage={errorMessage}
               isShaking={isShaking}
@@ -682,16 +734,20 @@ export const App: React.FC = () => {
 
             {/* Action Bar (Hint, Undo, Reset, Peek, New) */}
             <ActionBar
+              key={gameId}
+              canReset={mode !== 'rush' || status === 'playing'}
+              onHintUsed={() => setHintsUsed(n => n + 1)}
               currentWord={currentWord}
               targetWord={targetWord}
               historyLength={history.length}
-              isWon={status === 'won'}
+              isWon={status !== 'playing'}
               hardMode={settings.hardMode}
               isUnlimitedMode={mode === 'unlimited'}
               onUndo={handleUndo}
               onRestart={handleRestart}
               onNewRandomWord={() => startNewGame('unlimited')}
               onApplyHintWord={w => {
+                if (!canPlay) return;
                 setCurrentInput(w);
               }}
             />
@@ -701,18 +757,43 @@ export const App: React.FC = () => {
 
       {/* Virtual On-Screen Keyboard */}
       {(!isViewingCampaignMap || mode !== 'campaign') && (
-        <footer className="pb-2 bg-theme-bg-secondary/40 border-t border-theme-border/50">
+        <footer className="keyboard-footer">
           <VirtualKeyboard
             layout={settings.keyboardLayout}
             onKeyPress={handleKeyPress}
             onDelete={handleDelete}
             onSubmit={handleSubmit}
-            disabled={status !== 'playing' || isWinModalOpen}
+            disabled={!canPlay}
             hapticsEnabled={settings.hapticsEnabled}
           />
+          <p className="keyboard-caption">Type with your keyboard or tap the letters · <kbd>enter</kbd> to submit</p>
         </footer>
       )}
 
+      </div>
+      <aside className="side-panel" aria-label="Tips and progress">
+        <section className="guide-card">
+          <div className="guide-symbol"><BookOpen size={18} /></div>
+          <h2>One letter. One step.</h2>
+          <p>A word ladder with a cheeky destination. Every good word gets you closer.</p>
+          <div className="guide-steps">
+            <div className="guide-step"><span>1</span><p>Start with the word at the top of your ladder.</p></div>
+            <div className="guide-step"><span>2</span><p>Type a new four-letter word. Change exactly one letter.</p></div>
+            <div className="guide-step"><span>3</span><p>Reach the goal in as few moves as you can. Can you match par?</p></div>
+          </div>
+          <div className="guide-example" aria-label="LOOP to POOP: change the first letter"><div className="mini-word">{'LOOP'.split('').map((l,i) => <span key={i}>{l}</span>)}</div><ArrowRight size={14} className="text-theme-text-muted" /><div className="mini-word">{'POOP'.split('').map((l,i) => <span className={i === 0 ? 'changed' : ''} key={i}>{l}</span>)}</div></div>
+          <button className="text-link" onClick={() => setIsTutorialOpen(true)}>A quick walkthrough <ArrowRight size={13} /></button>
+        </section>
+        <section className="guide-card streak-card">
+          <div className="eyebrow">Your daily ritual</div>
+          <div className="streak-summary"><div className="streak-value">{stats.currentStreak}<small>day streak</small></div><Flame size={26} className="text-theme-accent" /></div>
+          <p>{stats.currentStreak ? 'Keep it going. A fresh puzzle is waiting every day.' : 'One puzzle is all it takes to start a new streak.'}</p>
+          <div className="flex items-center justify-between mt-5 pt-4 border-t border-theme-border"><span className="text-[10px] text-theme-text-muted">Best streak <strong className="text-theme-text-primary ml-1">{stats.maxStreak}</strong></span><button className="text-link" onClick={() => setIsStatsOpen(true)}>Your stats <ArrowRight size={12} /></button></div>
+        </section>
+        <p className="tip-note"><Lightbulb size={15} className="shrink-0 mt-0.5" />{settings.hardMode ? 'Hard mode is on. Every step counts: undo and rewind are disabled.' : 'Stuck on a word? Try a hint, or undo a move and explore another route.'}</p>
+      </aside>
+      </div>
+      <footer className="app-footer"><span>Made for curious minds & little breaks.</span><span>Four letters. Endless possibilities.</span></footer>
       {/* Modals & Popups */}
       {isWinModalOpen && (
         <WinModal
@@ -724,10 +805,12 @@ export const App: React.FC = () => {
           dayNumber={mode === 'daily' ? dailyDayNumber : undefined}
           onPlayAgain={() => {
             setIsWinModalOpen(false);
-            startNewGame();
+            if (mode === 'daily' || mode === 'custom' || mode === 'campaign') handleRestart();
+            else startNewGame();
           }}
           onNextStage={handleNextCampaignStage}
           hasNextStage={hasNextCampaignStage}
+          onClose={() => setIsWinModalOpen(false)}
         />
       )}
 
@@ -765,14 +848,18 @@ export const App: React.FC = () => {
 
       {isCustomModalOpen && (
         <CustomPuzzleModal
-          onStartCustomPuzzle={(s, t, p, path) => {
+          initialStartWord={mode === 'custom' ? startWord : undefined}
+          initialTargetWord={mode === 'custom' ? targetWord : undefined}
+          onStartCustomPuzzle={(s, t) => {
+            rushActiveRef.current = false;
+            setIsRushPlaying(false);
             setMode('custom');
-            setStartWord(s);
-            setTargetWord(t);
-            setPar(p);
-            setOptimalPath(path);
-            setHistory([]);
-            setStatus('playing');
+            startNewGame('custom', { customStart: s, customTarget: t });
+            const url = new URL(window.location.href);
+            url.searchParams.set('start', s);
+            url.searchParams.set('target', t);
+            url.searchParams.delete('mode');
+            window.history.replaceState({}, '', url);
           }}
           onClose={() => setIsCustomModalOpen(false)}
         />

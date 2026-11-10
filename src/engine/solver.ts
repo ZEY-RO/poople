@@ -26,7 +26,8 @@ initBuckets();
  * Returns all valid dictionary words that differ from `word` by exactly one letter.
  */
 export function getNeighbors(word: string): string[] {
-  const w = word.toUpperCase();
+  const w = word.toUpperCase().trim();
+  if (!/^[A-Z]{4}$/.test(w) || !WORD_SET.has(w)) return [];
   const neighbors = new Set<string>();
   for (let i = 0; i < 4; i++) {
     const pattern = w.slice(0, i) + '*' + w.slice(i + 1);
@@ -95,59 +96,62 @@ export function isValidStep(
   return { valid: true, changedIndex: diffIdx };
 }
 
-/**
- * Finds the shortest path using Breadth-First Search (BFS).
- * Returns array of words [start, step1, ..., target] or null if unreachable.
- */
-export function findShortestPath(start: string, target: string = 'POOP'): string[] | null {
-  const s = start.toUpperCase();
-  const t = target.toUpperCase();
+// A reverse BFS serves every distance, hint and neighbor evaluation for a target.
+// Keep this cache bounded because custom puzzles can use any dictionary target.
+const TARGET_CACHE = new Map<string, Map<string, { distance: number; next: string | null }>>();
+const MAX_CACHED_TARGETS = 12;
 
-  if (s === t) return [s];
-  if (!WORD_SET.has(s) || !WORD_SET.has(t)) return null;
+function getTargetRoutes(target: string): Map<string, { distance: number; next: string | null }> {
+  const cached = TARGET_CACHE.get(target);
+  if (cached) return cached;
 
-  const queue: string[] = [s];
-  const visited = new Map<string, string | null>();
-  visited.set(s, null);
-
-  while (queue.length > 0) {
-    const current = queue.shift()!;
-    if (current === t) {
-      // Reconstruct path
-      const path: string[] = [];
-      let curr: string | null = t;
-      while (curr !== null) {
-        path.push(curr);
-        curr = visited.get(curr) || null;
-      }
-      return path.reverse();
-    }
-
-    const neighbors = getNeighbors(current);
-    for (const neighbor of neighbors) {
-      if (!visited.has(neighbor)) {
-        visited.set(neighbor, current);
-        queue.push(neighbor);
-      }
+  const routes = new Map<string, { distance: number; next: string | null }>();
+  if (!WORD_SET.has(target)) return routes;
+  routes.set(target, { distance: 0, next: null });
+  const queue = [target];
+  for (let head = 0; head < queue.length; head++) {
+    const word = queue[head];
+    const distance = routes.get(word)!.distance + 1;
+    for (const neighbor of getNeighbors(word)) {
+      if (routes.has(neighbor)) continue;
+      routes.set(neighbor, { distance, next: word });
+      queue.push(neighbor);
     }
   }
 
-  return null;
+  if (TARGET_CACHE.size >= MAX_CACHED_TARGETS) {
+    TARGET_CACHE.delete(TARGET_CACHE.keys().next().value!);
+  }
+  TARGET_CACHE.set(target, routes);
+  return routes;
 }
 
-/**
- * Returns the exact Par (minimum steps) from start to target.
- */
+/** Returns a shortest legal ladder, including both endpoints, or null. */
+export function findShortestPath(start: string, target: string = 'POOP'): string[] | null {
+  const s = start.toUpperCase().trim();
+  const t = target.toUpperCase().trim();
+  if (!WORD_SET.has(s) || !WORD_SET.has(t)) return null;
+  const routes = getTargetRoutes(t);
+  if (!routes.has(s)) return null;
+  const path = [s];
+  let current = s;
+  while (current !== t) {
+    current = routes.get(current)!.next!;
+    path.push(current);
+  }
+  return path;
+}
+
+/** Returns the exact minimum steps from start to target, or -1 if unreachable. */
 export function getPar(start: string, target: string = 'POOP'): number {
-  const path = findShortestPath(start, target);
-  return path ? path.length - 1 : -1;
+  return getTargetRoutes(target.toUpperCase().trim()).get(start.toUpperCase().trim())?.distance ?? -1;
 }
 
 /**
  * Checks if current word has reached a dead end (no path to target).
  */
 export function isDeadEnd(currentWord: string, target: string = 'POOP'): boolean {
-  return findShortestPath(currentWord, target) === null;
+  return getPar(currentWord, target) < 0;
 }
 
 /**
@@ -197,34 +201,32 @@ export function getRandomPuzzle(
   maxSteps: number = 6,
   target: string = 'POOP'
 ): { startWord: string; par: number; optimalPath: string[] } {
-  // Try curated list first for great vocabulary
-  const shuffledCurated = [...CURATED_START_WORDS].sort(() => Math.random() - 0.5);
-  for (const word of shuffledCurated) {
-    if (word === target) continue;
-    const path = findShortestPath(word, target);
-    if (path) {
-      const par = path.length - 1;
-      if (par >= minSteps && par <= maxSteps) {
-        return { startWord: word, par, optimalPath: path };
-      }
-    }
-  }
+  const cleanTarget = target.toUpperCase().trim();
+  const routes = getTargetRoutes(cleanTarget);
+  if (!routes.size) throw new Error('The target must be a valid dictionary word.');
+  const min = Number.isFinite(minSteps) ? Math.max(1, Math.floor(minSteps)) : 3;
+  const max = Number.isFinite(maxSteps) ? Math.max(min, Math.floor(maxSteps)) : Math.max(min, 6);
+  const inRange = (word: string) => {
+    const distance = routes.get(word)?.distance ?? -1;
+    return distance >= min && distance <= max;
+  };
 
-  // Fallback to random dictionary word
-  const shuffledAll = [...FOUR_LETTER_WORDS].sort(() => Math.random() - 0.5);
-  for (const word of shuffledAll) {
-    if (word === target) continue;
-    const path = findShortestPath(word, target);
-    if (path) {
-      const par = path.length - 1;
-      if (par >= minSteps && par <= maxSteps) {
-        return { startWord: word, par, optimalPath: path };
-      }
-    }
+  // Prefer familiar words and choose uniformly rather than using a biased sort.
+  let candidates = [...new Set(CURATED_START_WORDS)].filter(inRange);
+  if (!candidates.length) candidates = [...routes.keys()].filter(inRange);
+  if (!candidates.length) {
+    // Some custom targets have small connected components. Fall back to the
+    // closest available distance, never an invented or unreachable ladder.
+    const available = [...routes.keys()].filter(word => word !== cleanTarget);
+    if (!available.length) throw new Error('The target has no connected words.');
+    const distanceFromRange = (word: string) => {
+      const distance = routes.get(word)!.distance;
+      return distance < min ? min - distance : Math.max(0, distance - max);
+    };
+    const closest = Math.min(...available.map(distanceFromRange));
+    candidates = available.filter(word => distanceFromRange(word) === closest);
   }
-
-  // Default guaranteed starter
-  const defaultWord = 'FART';
-  const defaultPath = findShortestPath(defaultWord, target) || ['FART', 'FORT', 'PORT', 'POST', 'POOT', 'POOP'];
-  return { startWord: defaultWord, par: defaultPath.length - 1, optimalPath: defaultPath };
+  const startWord = candidates[Math.floor(Math.random() * candidates.length)];
+  const optimalPath = findShortestPath(startWord, cleanTarget)!;
+  return { startWord, par: optimalPath.length - 1, optimalPath };
 }

@@ -58,7 +58,7 @@ const RAW_STAGES: Array<{
   { id: 40, name: "Sewer U-Bend", category: "Chapter 4: Pipe Dreams & Obstacles", startWord: "TRAP", targetWord: "POOP", description: "The U-bend P-trap holding water seal." },
 
   // Chapter 5: Grandmaster Commode (41-50)
-  { id: 41, name: "The Stench", category: "Chapter 5: Grandmaster Commode", startWord: "ODOR", targetWord: "POOP", description: "A pungent aroma requiring mastery to conquer." },
+  { id: 41, name: "The Stench", category: "Chapter 5: Grandmaster Commode", startWord: "RANK", targetWord: "POOP", description: "A pungent aroma requiring mastery to conquer." },
   { id: 42, name: "Blocked Flow", category: "Chapter 5: Grandmaster Commode", startWord: "CLOG", targetWord: "POOP", description: "A treacherous 6-step clog requiring surgical precision." },
   { id: 43, name: "Noxious Hazard", category: "Chapter 5: Grandmaster Commode", startWord: "FOUL", targetWord: "POOP", description: "Only the cleanest minds can clear this foul route." },
   { id: 44, name: "Slow Drip", category: "Chapter 5: Grandmaster Commode", startWord: "LEAK", targetWord: "POOP", description: "Fix the phantom leak before water damage occurs." },
@@ -71,8 +71,9 @@ const RAW_STAGES: Array<{
 ];
 
 export const CAMPAIGN_STAGES: CampaignStage[] = RAW_STAGES.map(s => {
-  const path = findShortestPath(s.startWord, s.targetWord) || [];
-  const par = Math.max(1, path.length - 1);
+  const path = findShortestPath(s.startWord, s.targetWord);
+  if (!path || path.length < 2) throw new Error(`Campaign stage ${s.id} has no playable ladder.`);
+  const par = path.length - 1;
   let difficulty: CampaignStage['difficulty'] = 'easy';
   if (par >= 6) difficulty = 'master';
   else if (par >= 4) difficulty = 'hard';

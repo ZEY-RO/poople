@@ -1,157 +1,60 @@
 import React, { useState } from 'react';
 import { CAMPAIGN_STAGES } from '../engine/campaign';
 import { CampaignStage } from '../types/game';
-import { Trophy, Star, Lock } from 'lucide-react';
+import { Trophy, Star, Lock, ArrowRight, Check } from 'lucide-react';
 import { soundFx } from '../services/audio';
 
 interface CampaignModeViewProps {
   currentStageId?: number;
-  completedStars: Record<number, number>; // stageId -> 1..3
+  completedStars: Record<number, number>;
   onSelectStage: (stage: CampaignStage) => void;
 }
 
-export const CampaignModeView: React.FC<CampaignModeViewProps> = ({
-  currentStageId,
-  completedStars,
-  onSelectStage
-}) => {
-  const [selectedChapter, setSelectedChapter] = useState<number>(1);
+const CHAPTER_TITLES = ['The Porcelain Basics', 'The Plumber’s Apprentice', 'The Porcelain Labyrinth', 'Pipe Dreams & Obstacles', 'Grandmaster Commode'];
 
-  // Calculate total stars collected
-  const totalStars = Object.values(completedStars).reduce((acc, s) => acc + s, 0);
-  const maxPossibleStars = CAMPAIGN_STAGES.length * 3;
-
-  // Group stages by 10 per chapter
-  const chapters = [
-    { num: 1, title: 'Chapter 1: The Porcelain Basics', stages: CAMPAIGN_STAGES.slice(0, 10) },
-    { num: 2, title: "Chapter 2: The Plumber's Apprentice", stages: CAMPAIGN_STAGES.slice(10, 20) },
-    { num: 3, title: 'Chapter 3: The Porcelain Labyrinth', stages: CAMPAIGN_STAGES.slice(20, 30) },
-    { num: 4, title: 'Chapter 4: Pipe Dreams & Obstacles', stages: CAMPAIGN_STAGES.slice(30, 40) },
-    { num: 5, title: 'Chapter 5: Grandmaster Commode', stages: CAMPAIGN_STAGES.slice(40, 50) }
-  ];
-
-  const currentChapterObj = chapters.find(c => c.num === selectedChapter) || chapters[0];
-
-  const isStageUnlocked = (stageId: number): boolean => {
-    if (stageId === 1) return true;
-    const prevStars = completedStars[stageId - 1];
-    return prevStars !== undefined && prevStars > 0;
-  };
+export const CampaignModeView: React.FC<CampaignModeViewProps> = ({ currentStageId, completedStars, onSelectStage }) => {
+  const isStageUnlocked = (stageId: number) => stageId === 1 || (completedStars[stageId] || 0) > 0 || (completedStars[stageId - 1] || 0) > 0;
+  const nextStage = CAMPAIGN_STAGES.find(stage => !completedStars[stage.id] && isStageUnlocked(stage.id));
+  const initialStageId = currentStageId && !completedStars[currentStageId] ? currentStageId : nextStage?.id || currentStageId || 1;
+  const [selectedChapter, setSelectedChapter] = useState(() => Math.ceil(initialStageId / 10));
+  const totalStars = CAMPAIGN_STAGES.reduce((total, stage) => total + (completedStars[stage.id] || 0), 0);
+  const completedCount = CAMPAIGN_STAGES.filter(stage => (completedStars[stage.id] || 0) > 0).length;
+  const stages = CAMPAIGN_STAGES.slice((selectedChapter - 1) * 10, selectedChapter * 10);
+  const selectStage = (stage: CampaignStage) => { soundFx.playKey(); onSelectStage(stage); };
 
   return (
-    <div className="w-full max-w-md mx-auto px-4 py-2">
-      {/* Campaign Header Summary */}
-      <div className="p-3 rounded-2xl bg-theme-bg-secondary border border-theme-border shadow-sm flex items-center justify-between mb-3">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-theme-accent text-theme-accent-text shadow-sm">
-            <Trophy className="w-5 h-5" />
-          </div>
-          <div>
-            <h2 className="text-sm sm:text-base font-display font-black text-theme-text-primary">
-              The Gauntlet (50 Stages)
-            </h2>
-            <p className="text-[11px] font-semibold text-theme-text-muted">
-              Earn 3 stars per stage by matching Par!
-            </p>
-          </div>
+    <section className="w-full max-w-lg mx-auto px-4 py-3" aria-label="Campaign stage selection">
+      <div className="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h2 className="text-xl font-display font-bold flex items-center gap-2"><Trophy className="w-5 h-5 text-theme-accent" />The Gauntlet</h2>
+          <p className="text-xs text-theme-text-muted mt-1">50 ladders. Five chapters. One way up.</p>
         </div>
-
-        {/* Stars Tally Badge */}
-        <div className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-theme-accent/15 border border-theme-accent/30">
-          <Star className="w-4 h-4 text-theme-accent fill-theme-accent" />
-          <span className="font-display font-black text-xs text-theme-text-primary">
-            {totalStars} / {maxPossibleStars}
-          </span>
-        </div>
+        <div className="flex items-center gap-1.5 px-2.5 py-2 rounded-lg bg-theme-bg-secondary text-xs font-semibold shrink-0" aria-label={`${totalStars} of ${CAMPAIGN_STAGES.length * 3} stars earned`}><Star className="w-4 h-4 text-theme-accent fill-theme-accent" />{totalStars}<span className="font-normal text-theme-text-muted">/ {CAMPAIGN_STAGES.length * 3}</span></div>
       </div>
-
-      {/* Chapter Tabs */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 mb-2 no-scrollbar">
-        {chapters.map(c => {
-          const isSelected = selectedChapter === c.num;
-          return (
-            <button
-              key={c.num}
-              onClick={() => {
-                soundFx.playKey();
-                setSelectedChapter(c.num);
-              }}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all btn-press ${
-                isSelected
-                  ? 'bg-theme-accent text-theme-accent-text font-black shadow-sm'
-                  : 'bg-theme-bg-card text-theme-text-secondary border border-theme-border/60 hover:bg-theme-bg-muted'
-              }`}
-            >
-              Ch. {c.num}
-            </button>
-          );
-        })}
+      <div className="h-1.5 rounded-full bg-theme-bg-secondary overflow-hidden" role="progressbar" aria-label="Campaign completion" aria-valuemin={0} aria-valuemax={CAMPAIGN_STAGES.length} aria-valuenow={completedCount}><div className="h-full bg-theme-accent rounded-full" style={{ width: `${completedCount / CAMPAIGN_STAGES.length * 100}%` }} /></div>
+      <div className="flex items-center justify-between gap-2 mt-2 mb-4"><span className="text-[11px] text-theme-text-muted">{completedCount} of {CAMPAIGN_STAGES.length} stages complete</span>{nextStage && <button type="button" onClick={() => selectStage(nextStage)} className="text-xs font-semibold text-theme-accent flex items-center gap-1 min-h-8">{completedCount ? 'Continue' : 'Start stage 1'}<ArrowRight className="w-3.5 h-3.5" /></button>}</div>
+      <div className="flex gap-1 p-1 mb-4 rounded-xl bg-theme-bg-secondary" role="group" aria-label="Campaign chapters">
+        {CHAPTER_TITLES.map((title, index) => <button type="button" key={title} aria-pressed={selectedChapter === index + 1} title={`Chapter ${index + 1}: ${title}`} onClick={() => { soundFx.playKey(); setSelectedChapter(index + 1); }} className={`flex-1 min-h-10 rounded-lg text-xs font-medium btn-press ${selectedChapter === index + 1 ? 'bg-theme-bg-card text-theme-accent shadow-sm' : 'text-theme-text-muted hover:text-theme-text-primary'}`}><span className="hidden sm:inline">Chapter </span>{index + 1}</button>)}
       </div>
-
-      {/* Chapter Title */}
-      <div className="text-xs font-bold text-theme-text-primary mb-2 px-1">
-        {currentChapterObj.title}
-      </div>
-
-      {/* Stages Grid */}
-      <div className="grid grid-cols-2 gap-2 max-h-[50vh] overflow-y-auto custom-scrollbar p-1">
-        {currentChapterObj.stages.map(stage => {
+      <h3 className="text-sm font-semibold mb-1">{CHAPTER_TITLES[selectedChapter - 1]}</h3>
+      <p className="text-[11px] text-theme-text-muted mb-3">Match par for 3 stars. Complete a stage to unlock the next.</p>
+      <div className="grid grid-cols-2 gap-2.5">
+        {stages.map(stage => {
           const unlocked = isStageUnlocked(stage.id);
           const stars = completedStars[stage.id] || 0;
           const isCurrent = currentStageId === stage.id;
-
           return (
-            <button
-              key={stage.id}
-              disabled={!unlocked}
-              onClick={() => {
-                soundFx.playFlush();
-                onSelectStage(stage);
-              }}
-              className={`p-3 rounded-2xl border text-left transition-all btn-press relative overflow-hidden ${
-                !unlocked
-                  ? 'bg-theme-bg-secondary/40 border-theme-border/40 opacity-50 cursor-not-allowed'
-                  : isCurrent
-                  ? 'bg-theme-accent text-theme-accent-text border-theme-accent shadow-md scale-102 font-black'
-                  : 'bg-theme-bg-card text-theme-text-primary border border-theme-border/60 hover:border-theme-accent hover:bg-theme-bg-muted'
-              }`}
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-bold opacity-75">
-                  Stage {stage.id}
-                </span>
-                {!unlocked ? (
-                  <Lock className="w-3.5 h-3.5 opacity-40" />
-                ) : (
-                  <div className="flex gap-0.5">
-                    {[1, 2, 3].map(sIdx => (
-                      <Star
-                        key={sIdx}
-                        className={`w-3 h-3 ${
-                          sIdx <= stars
-                            ? 'text-theme-accent fill-theme-accent'
-                            : 'opacity-20'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="text-xs font-display font-black truncate mt-1">
-                {stage.name}
-              </div>
-
-              <div className="flex items-center justify-between mt-2 text-[10px] font-semibold">
-                <span className="font-mono bg-theme-bg-secondary text-theme-accent px-1.5 py-0.5 rounded border border-theme-border/50">
-                  {stage.startWord} ➔ {stage.targetWord}
-                </span>
-                <span className="opacity-75">Par: {stage.par}</span>
-              </div>
+            <button type="button" key={stage.id} disabled={!unlocked} onClick={() => selectStage(stage)} aria-current={isCurrent ? 'step' : undefined}
+              aria-label={`Stage ${stage.id}: ${stage.name}, ${stage.startWord} to ${stage.targetWord}, par ${stage.par}${!unlocked ? ', locked' : stars ? `, ${stars} stars earned` : ''}`}
+              className={`p-3 rounded-xl border text-left min-w-0 btn-press transition-colors ${!unlocked ? 'bg-theme-bg-secondary border-theme-border text-theme-text-muted opacity-60 cursor-not-allowed' : isCurrent ? 'bg-theme-accent-light border-theme-accent text-theme-text-primary' : 'bg-theme-bg-card border-theme-border hover:border-theme-accent'}`}>
+              <div className="flex items-center justify-between gap-1 mb-2"><span className="text-[10px] text-theme-text-muted font-medium">STAGE {String(stage.id).padStart(2, '0')}</span>{!unlocked ? <Lock className="w-3 h-3" /> : stars > 0 ? <Check className="w-3.5 h-3.5 text-theme-accent" /> : null}</div>
+              <p className="text-xs font-semibold truncate" title={stage.name}>{stage.name}</p>
+              <p className="font-mono text-[11px] text-theme-text-secondary mt-2">{stage.startWord}<span className="mx-1 text-theme-text-muted">→</span>{stage.targetWord}</p>
+              <div className="flex items-center justify-between gap-1 mt-3"><span className="flex gap-0.5" aria-hidden="true">{[1, 2, 3].map(star => <Star key={star} className={`w-3 h-3 ${star <= stars ? 'text-theme-accent fill-theme-accent' : 'text-theme-border'}`} />)}</span><span className="text-[10px] text-theme-text-muted">Par {stage.par}</span></div>
             </button>
           );
         })}
       </div>
-    </div>
+    </section>
   );
 };

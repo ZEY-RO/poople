@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { Calendar, Flame, History } from 'lucide-react';
-import { getTimeUntilNextDaily, getRecentDailyPuzzles } from '../engine/daily';
+import React, { useState, useEffect, useMemo } from 'react';
+import { CalendarDays, Flame, History, Check, ChevronUp } from 'lucide-react';
+import { getTimeUntilNextDaily, getRecentDailyPuzzles, formatDateToKey } from '../engine/daily';
 import { soundFx } from '../services/audio';
 
 interface DailyModeViewProps {
@@ -13,112 +13,67 @@ interface DailyModeViewProps {
 }
 
 export const DailyModeView: React.FC<DailyModeViewProps> = ({
-  dayNumber,
-  dateKey,
-  currentStreak,
-  maxStreak,
-  onSelectDate,
-  completedHistory
+  dayNumber, dateKey, currentStreak, maxStreak, onSelectDate, completedHistory
 }) => {
   const [showArchive, setShowArchive] = useState(false);
-  const [countdown, setCountdown] = useState(getTimeUntilNextDaily());
-
+  const [countdown, setCountdown] = useState(getTimeUntilNextDaily);
+  const today = formatDateToKey();
+  const archives = useMemo(() => getRecentDailyPuzzles(30), [today]);
   useEffect(() => {
-    const timer = setInterval(() => {
-      setCountdown(getTimeUntilNextDaily());
-    }, 1000);
+    const timer = setInterval(() => setCountdown(getTimeUntilNextDaily()), 1000);
     return () => clearInterval(timer);
   }, []);
-
-  const archives = getRecentDailyPuzzles(21);
+  const formattedDate = new Date(`${dateKey}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+  const time = [countdown.hours, countdown.minutes, countdown.seconds].map(n => String(n).padStart(2, '0')).join(':');
 
   return (
-    <div className="w-full max-w-md mx-auto px-4 pt-1 pb-2">
-      {/* Daily Banner Card */}
-      <div className="flex items-center justify-between px-3 py-2 rounded-2xl bg-theme-bg-secondary border border-theme-border shadow-sm">
-        {/* Left: Day & Date */}
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-xl bg-theme-accent text-theme-accent-text shadow-sm">
-            <Calendar className="w-4 h-4" />
-          </div>
+    <section className="w-full max-w-lg mx-auto px-4 pt-1 pb-3" aria-label="Daily puzzle details">
+      <div className="flex items-center justify-between gap-3 pb-3 border-b border-theme-border">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <CalendarDays className="w-5 h-5 text-theme-accent shrink-0" />
           <div>
-            <h2 className="text-sm sm:text-base font-display font-black text-theme-text-primary">
-              Daily Poople #{dayNumber}
-            </h2>
-            <p className="text-[11px] font-semibold text-theme-text-muted">
-              {dateKey}
-            </p>
+            <h2 className="text-sm font-semibold text-theme-text-primary">Daily puzzle <span className="text-theme-text-muted">#{dayNumber}</span></h2>
+            <p className="text-[11px] text-theme-text-muted mt-0.5">{formattedDate}{dateKey !== today ? ' · Archive' : ''}</p>
           </div>
         </div>
-
-        {/* Right: Streaks & Next Puzzle Countdown */}
-        <div className="flex items-center gap-3">
-          {/* Streak Counter */}
-          <div className="flex items-center gap-1" title={`Current Streak: ${currentStreak} (Max: ${maxStreak})`}>
-            <Flame className={`w-5 h-5 ${currentStreak > 0 ? 'text-theme-accent animate-bounceShort' : 'opacity-40'}`} />
-            <span className="font-display font-black text-sm text-theme-text-primary">
-              {currentStreak}
-            </span>
-          </div>
-
-          {/* Archive Toggle Button */}
-          <button
-            onClick={() => {
-              soundFx.playKey();
-              setShowArchive(!showArchive);
-            }}
-            className="p-1.5 rounded-xl bg-theme-bg-card text-theme-text-secondary border border-theme-border/60 hover:bg-theme-bg-muted btn-press"
-            title="Past Daily Archive"
-          >
-            <History className="w-4 h-4" />
+        <div className="flex items-center gap-3 shrink-0">
+          <span className="flex items-center gap-1 text-sm font-semibold" title={`Current streak ${currentStreak}. Best streak ${maxStreak}.`} aria-label={`${currentStreak} day streak, best ${maxStreak}`}>
+            <Flame className="w-4 h-4 text-theme-accent" />{currentStreak}
+          </span>
+          <button type="button" onClick={() => { soundFx.playKey(); setShowArchive(value => !value); }}
+            className="min-h-10 px-2.5 flex items-center gap-1.5 rounded-lg border border-theme-border text-xs font-medium text-theme-text-secondary hover:bg-theme-bg-secondary btn-press"
+            aria-expanded={showArchive} aria-controls="daily-archive" title="Browse past daily puzzles">
+            {showArchive ? <ChevronUp className="w-4 h-4" /> : <History className="w-4 h-4" />}<span>Archive</span>
           </button>
         </div>
       </div>
-
-      {/* Archive Dropdown Drawer */}
+      <div className="mt-2 flex items-center justify-between text-[11px] text-theme-text-muted">
+        <span>{completedHistory[dateKey]?.won ? <span className="flex items-center gap-1 text-theme-accent"><Check className="w-3 h-3" /> Completed · play again for practice</span> : 'A fresh word ladder, every day.'}</span>
+        <span className="tabular-nums shrink-0 ml-2" aria-label={`Next daily puzzle in ${countdown.hours} hours ${countdown.minutes} minutes`}>Next in {time}</span>
+      </div>
       {showArchive && (
-        <div className="mt-2 p-3 rounded-2xl bg-theme-modal shadow-xl border border-theme-border animate-pop">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-xs font-bold text-theme-text-primary flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-theme-accent" />
-              Past Daily Puzzles
-            </h3>
-            <span className="text-[10px] text-theme-text-muted font-mono">
-              Next in {String(countdown.hours).padStart(2, '0')}:{String(countdown.minutes).padStart(2, '0')}:{String(countdown.seconds).padStart(2, '0')}
-            </span>
+        <div id="daily-archive" className="mt-3 p-3 rounded-xl bg-theme-bg-secondary border border-theme-border animate-pop">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <h3 className="text-xs font-semibold">Last 30 puzzles</h3>
+            {dateKey !== today && <button type="button" onClick={() => { onSelectDate(today); setShowArchive(false); }} className="text-xs font-semibold text-theme-accent underline underline-offset-2">Back to today</button>}
           </div>
-
-          <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5 max-h-40 overflow-y-auto custom-scrollbar p-1">
+          <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 max-h-64 overflow-y-auto custom-scrollbar p-0.5">
             {archives.map(item => {
               const record = completedHistory[item.date];
               const isSelected = item.date === dateKey;
               return (
-                <button
-                  key={item.date}
-                  onClick={() => {
-                    soundFx.playKey();
-                    onSelectDate(item.date);
-                    setShowArchive(false);
-                  }}
-                  className={`p-2 rounded-xl text-left border transition-all btn-press ${
-                    isSelected
-                      ? 'bg-theme-accent text-theme-accent-text border-theme-accent font-black shadow-sm'
-                      : record?.won
-                      ? 'bg-emerald-500/20 text-emerald-600 border-emerald-500/40'
-                      : 'bg-theme-modal-subcard text-theme-text-secondary border-theme-modal-subcard-border hover:bg-theme-bg-secondary'
-                  }`}
-                >
-                  <div className="text-[10px] font-bold opacity-75">#{item.dayNumber}</div>
-                  <div className="text-xs font-mono font-black">{item.startWord}</div>
-                  <div className="text-[9px] mt-0.5 font-semibold">
-                    {record ? (record.won ? `✓ (${record.steps})` : '✕') : `Par ${item.par}`}
-                  </div>
+                <button type="button" key={item.date} onClick={() => { soundFx.playKey(); onSelectDate(item.date); setShowArchive(false); }}
+                  aria-pressed={isSelected} aria-label={`Daily puzzle ${item.dayNumber}, ${item.date}, ${record?.won ? `completed in ${record.steps} steps` : `par ${item.par}`}`}
+                  className={`p-2 rounded-lg text-left border btn-press ${isSelected ? 'bg-theme-accent text-theme-accent-text border-theme-accent' : 'bg-theme-bg-card text-theme-text-secondary border-theme-border hover:border-theme-accent'}`}>
+                  <div className="text-[10px] opacity-75">{new Date(`${item.date}T12:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
+                  <div className="text-xs font-mono font-bold mt-1">{item.startWord}</div>
+                  <div className={`text-[10px] mt-1 ${record?.won && !isSelected ? 'text-theme-accent' : ''}`}>{record?.won ? `✓ ${record.steps} steps` : `Par ${item.par}`}</div>
                 </button>
               );
             })}
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 };

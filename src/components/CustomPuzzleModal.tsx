@@ -1,158 +1,94 @@
-import React, { useState } from 'react';
-import { PlusCircle, Sparkles, Check, Copy, Play, X, AlertTriangle } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ArrowRight, Check, CheckCircle2, Copy, Play, X, AlertTriangle } from 'lucide-react';
 import { findShortestPath } from '../engine/solver';
 import { WORD_SET } from '../data/dictionary';
 import { soundFx } from '../services/audio';
+import { copyText } from '../services/clipboard';
+import { Modal } from './Modal';
 
 interface CustomPuzzleModalProps {
+  initialStartWord?: string;
+  initialTargetWord?: string;
   onStartCustomPuzzle: (startWord: string, targetWord: string, par: number, path: string[]) => void;
   onClose: () => void;
 }
 
-export const CustomPuzzleModal: React.FC<CustomPuzzleModalProps> = ({
-  onStartCustomPuzzle,
-  onClose
-}) => {
-  const [startWord, setStartWord] = useState<string>('CHAT');
-  const [targetWord, setTargetWord] = useState<string>('POOP');
-  const [copied, setCopied] = useState<boolean>(false);
+export const CustomPuzzleModal: React.FC<CustomPuzzleModalProps> = ({ onStartCustomPuzzle, onClose, initialStartWord = 'CHAT', initialTargetWord = 'POOP' }) => {
+  const [startWord, setStartWord] = useState(() => initialStartWord.toUpperCase());
+  const [targetWord, setTargetWord] = useState(() => initialTargetWord.toUpperCase());
+  const [copyStatus, setCopyStatus] = useState<'idle' | 'copied' | 'failed'>('idle');
+  const [showSolution, setShowSolution] = useState(false);
+  const validStart = startWord.length === 4 && WORD_SET.has(startWord);
+  const validTarget = targetWord.length === 4 && WORD_SET.has(targetWord);
+  const path = useMemo(() => validStart && validTarget && startWord !== targetWord
+    ? findShortestPath(startWord, targetWord) : null, [startWord, targetWord, validStart, validTarget]);
+  const par = path ? path.length - 1 : 0;
 
-  const cleanStart = startWord.toUpperCase().trim();
-  const cleanTarget = targetWord.toUpperCase().trim();
-
-  const isStartValid = cleanStart.length === 4 && WORD_SET.has(cleanStart);
-  const isTargetValid = cleanTarget.length === 4 && WORD_SET.has(cleanTarget);
-
-  let path: string[] | null = null;
-  let par = -1;
-
-  if (isStartValid && isTargetValid && cleanStart !== cleanTarget) {
-    path = findShortestPath(cleanStart, cleanTarget);
-    if (path) par = path.length - 1;
-  }
-
-  const handleCopyLink = async () => {
-    soundFx.playKey();
-    const url = `${window.location.origin}${window.location.pathname}?start=${cleanStart}&target=${cleanTarget}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2500);
-    } catch (e) {
-      console.error(e);
-    }
-  };
+  useEffect(() => {
+    setCopyStatus('idle');
+    setShowSolution(false);
+  }, [startWord, targetWord]);
 
   const handlePlay = () => {
-    if (path && par > 0) {
-      soundFx.playFlush();
-      onStartCustomPuzzle(cleanStart, cleanTarget, par, path);
-      onClose();
-    }
+    if (!path || par < 1) return;
+    soundFx.playFlush();
+    onStartCustomPuzzle(startWord, targetWord, par, path);
+    onClose();
   };
 
+  const handleCopy = async () => {
+    if (!path) return;
+    const url = new URL(window.location.href);
+    url.search = '';
+    url.hash = '';
+    url.searchParams.set('start', startWord);
+    url.searchParams.set('target', targetWord);
+    setCopyStatus(await copyText(url.toString()) ? 'copied' : 'failed');
+  };
+
+  let feedback = 'Enter two four-letter dictionary words to check your puzzle.';
+  if (startWord.length === 4 && !validStart) feedback = `${startWord} is not in the game dictionary.`;
+  else if (targetWord.length === 4 && !validTarget) feedback = `${targetWord} is not in the game dictionary.`;
+  else if (validStart && validTarget && startWord === targetWord) feedback = 'Choose different start and target words.';
+  else if (validStart && validTarget && !path) feedback = 'These words are disconnected. Try a different pair.';
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-pop">
-      <div className="w-full max-w-md bg-theme-modal text-theme-text-primary rounded-3xl shadow-2xl border border-theme-border overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="p-4 border-b border-theme-border/60 flex items-center justify-between">
-          <h2 className="text-lg font-display font-black text-theme-text-primary flex items-center gap-2">
-            <PlusCircle className="w-5 h-5 text-theme-accent" />
-            Custom Puzzle Builder
-          </h2>
-          <button
-            onClick={() => {
-              soundFx.playKey();
-              onClose();
-            }}
-            className="p-1 rounded-xl text-theme-text-muted hover:text-theme-text-primary hover:bg-theme-bg-secondary btn-press"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Form Body */}
-        <div className="p-5 space-y-4">
+    <Modal label="Create a custom puzzle" onClose={onClose}>
+      <form onSubmit={event => { event.preventDefault(); handlePlay(); }} className="w-full bg-theme-modal text-theme-text-primary rounded-3xl shadow-2xl border border-theme-border overflow-hidden flex flex-col max-h-[90dvh]">
+        <div className="p-5 border-b border-theme-border flex items-start justify-between gap-3">
           <div>
-            <label className="text-xs font-bold text-theme-text-primary block mb-1">
-              Starting Word (4 Letters)
-            </label>
-            <input
-              type="text"
-              maxLength={4}
-              value={startWord}
-              onChange={e => setStartWord(e.target.value.toUpperCase())}
-              placeholder="e.g. CHAT"
-              className="w-full px-4 py-2.5 rounded-xl border border-theme-border bg-theme-bg-secondary text-theme-text-primary font-mono font-black text-lg text-center tracking-widest uppercase focus:ring-2 focus:ring-theme-accent outline-none"
-            />
-            {!isStartValid && cleanStart.length === 4 && (
-              <span className="text-[11px] text-rose-500 font-semibold mt-1 block">
-                Not a recognized dictionary word.
-              </span>
-            )}
+            <h2 className="text-xl font-display font-bold">Make it your own</h2>
+            <p className="text-sm text-theme-text-muted mt-1">Build a word ladder. Challenge a friend.</p>
           </div>
-
-          <div>
-            <label className="text-xs font-bold text-theme-text-primary block mb-1">
-              Target Word (Default: POOP)
-            </label>
-            <input
-              type="text"
-              maxLength={4}
-              value={targetWord}
-              onChange={e => setTargetWord(e.target.value.toUpperCase())}
-              placeholder="e.g. POOP"
-              className="w-full px-4 py-2.5 rounded-xl border border-theme-border bg-theme-bg-secondary text-theme-text-primary font-mono font-black text-lg text-center tracking-widest uppercase focus:ring-2 focus:ring-theme-accent outline-none"
-            />
-            {!isTargetValid && cleanTarget.length === 4 && (
-              <span className="text-[11px] text-rose-500 font-semibold mt-1 block">
-                Not a recognized dictionary word.
-              </span>
-            )}
-          </div>
-
-          {/* Solvability Preview Card */}
-          <div className="p-3 rounded-2xl bg-theme-modal-subcard border border-theme-modal-subcard-border text-center">
-            {path ? (
-              <div>
-                <div className="text-xs font-bold text-emerald-500 flex items-center justify-center gap-1">
-                  <Sparkles className="w-4 h-4" />
-                  Solvable in {par} Steps (Par: {par})
-                </div>
-                <div className="text-[11px] font-mono text-theme-text-muted mt-1 truncate">
-                  Optimal: {path.join(' ➔ ')}
-                </div>
-              </div>
-            ) : (
-              <div className="text-xs font-bold text-rose-500 flex items-center justify-center gap-1">
-                <AlertTriangle className="w-4 h-4" />
-                {cleanStart === cleanTarget ? 'Start and target must differ' : 'No path exists between these words'}
-              </div>
-            )}
-          </div>
+          <button type="button" onClick={onClose} aria-label="Close custom puzzle" className="p-2 rounded-xl text-theme-text-muted hover:bg-theme-bg-secondary"><X className="w-5 h-5" /></button>
         </div>
-
-        {/* Footer Actions */}
-        <div className="p-4 bg-theme-modal-subcard border-t border-theme-border/60 flex gap-2">
-          <button
-            disabled={!path}
-            onClick={handleCopyLink}
-            className="flex-1 py-3 px-3 rounded-2xl bg-theme-bg-card text-theme-text-secondary border border-theme-border/60 hover:bg-theme-bg-secondary font-bold text-xs flex items-center justify-center gap-1.5 btn-press disabled:opacity-40"
-          >
-            {copied ? <Check className="w-4 h-4 text-emerald-500" /> : <Copy className="w-4 h-4" />}
-            <span>{copied ? 'Link Copied!' : 'Share Link'}</span>
-          </button>
-
-          <button
-            disabled={!path}
-            onClick={handlePlay}
-            className="flex-1 py-3 px-4 rounded-2xl bg-theme-accent hover:bg-theme-accent-hover text-theme-accent-text font-display font-black text-sm shadow-md flex items-center justify-center gap-1.5 btn-press disabled:opacity-40"
-          >
-            <Play className="w-4 h-4" />
-            <span>Play Now</span>
-          </button>
+        <div className="p-5 space-y-5 overflow-y-auto">
+          <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+            <div>
+              <label htmlFor="custom-start" className="text-xs font-bold text-theme-text-secondary block mb-2">Start word</label>
+              <input id="custom-start" autoComplete="off" autoCapitalize="characters" spellCheck={false} maxLength={4} value={startWord} onChange={event => setStartWord(event.target.value.replace(/[^a-z]/gi, '').toUpperCase())} aria-invalid={startWord.length === 4 && !validStart} aria-describedby="custom-feedback" className="w-full min-w-0 px-2 py-3 rounded-xl border border-theme-border bg-theme-bg-secondary text-theme-text-primary font-mono font-bold text-xl text-center tracking-widest focus:ring-2 focus:ring-theme-accent outline-none" />
+            </div>
+            <ArrowRight className="w-4 h-4 text-theme-text-muted mt-6" />
+            <div>
+              <label htmlFor="custom-target" className="text-xs font-bold text-theme-text-secondary block mb-2">Target word</label>
+              <input id="custom-target" autoComplete="off" autoCapitalize="characters" spellCheck={false} maxLength={4} value={targetWord} onChange={event => setTargetWord(event.target.value.replace(/[^a-z]/gi, '').toUpperCase())} aria-invalid={targetWord.length === 4 && !validTarget} aria-describedby="custom-feedback" className="w-full min-w-0 px-2 py-3 rounded-xl border border-theme-border bg-theme-bg-secondary text-theme-text-primary font-mono font-bold text-xl text-center tracking-widest focus:ring-2 focus:ring-theme-accent outline-none" />
+            </div>
+          </div>
+          <div id="custom-feedback" role="status" className="p-4 rounded-2xl bg-theme-modal-subcard border border-theme-modal-subcard-border text-sm">
+            {path ? <>
+              <div className="font-semibold flex items-center gap-2 text-theme-text-primary"><CheckCircle2 className="w-4 h-4 text-emerald-600" />Ready to play · {par} {par === 1 ? 'move' : 'moves'} at par</div>
+              <button type="button" onClick={() => setShowSolution(value => !value)} className="text-xs text-theme-accent font-semibold mt-3 underline underline-offset-4">{showSolution ? 'Hide solution' : 'Preview shortest solution'}</button>
+              {showSolution && <p className="text-xs font-mono text-theme-text-secondary mt-3 leading-relaxed break-words">{path.join(' → ')}</p>}
+            </> : <div className="text-theme-text-secondary flex gap-2"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />{feedback}</div>}
+          </div>
+          <p role="status" className="sr-only">{copyStatus === 'copied' ? 'Puzzle link copied to the clipboard.' : ''}</p>
+          {copyStatus === 'failed' && <p role="alert" className="text-xs text-rose-600">Copying is unavailable in this browser. Play the puzzle, then copy its address from your browser.</p>}
         </div>
-      </div>
-    </div>
+        <div className="p-5 bg-theme-modal-subcard border-t border-theme-border flex gap-3">
+          <button type="button" disabled={!path} onClick={handleCopy} className="flex-1 py-3 px-3 rounded-xl bg-theme-bg-card text-theme-text-primary border border-theme-border font-semibold text-sm flex items-center justify-center gap-2 disabled:opacity-40">{copyStatus === 'copied' ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}{copyStatus === 'copied' ? 'Link copied' : 'Copy link'}</button>
+          <button type="submit" disabled={!path} className="flex-1 py-3 px-3 rounded-xl bg-theme-accent text-theme-accent-text font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40"><Play className="w-4 h-4" />Play puzzle</button>
+        </div>
+      </form>
+    </Modal>
   );
 };
