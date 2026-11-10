@@ -79,7 +79,7 @@ export const VirtualKeyboard: React.FC<VirtualKeyboardProps> = ({
               <button type="button" disabled={disabled} onMouseDown={event => event.preventDefault()}
                 onClick={() => activate(onSubmit)}
                 className="min-w-12 sm:min-w-16 h-12 px-2 flex items-center justify-center gap-1 rounded-lg bg-theme-key-special-bg text-theme-key-special-text border border-theme-key-special-border font-semibold text-[10px] btn-press disabled:opacity-40"
-                title="Submit word (Enter)" aria-label="Submit word">
+                title="Submit word (Enter)" aria-label="Enter — submit word">
                 <CornerDownLeft className="w-4 h-4" /><span className="hidden sm:inline">Enter</span>
               </button>
             )}

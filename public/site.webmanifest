@@ -1,11 +1,11 @@
 {
-  "name": "Poople — Play Unlimited Word Ladder Game",
+  "name": "Poople — Free Word Ladder Game",
   "short_name": "Poople",
-  "description": "Play Unlimited Poople online for free! No daily limits—enjoy endless word ladder puzzles anytime.",
+  "description": "Change one letter at a time in free daily and unlimited word ladder puzzles.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#d97706",
+  "background_color": "#f6f7f2",
+  "theme_color": "#276b53",
   "icons": [
     {
       "src": "/favicon-48x48.png",

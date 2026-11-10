@@ -1,14 +1,4 @@
 User-agent: *
 Allow: /
 
-# Explicit crawler access
-User-agent: Googlebot
-Allow: /
-
-User-agent: Googlebot-Image
-Allow: /
-
-User-agent: Googlebot-Favicon
-Allow: /
-
 Sitemap: https://poople.site/sitemap.xml

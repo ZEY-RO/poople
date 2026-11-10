@@ -10,7 +10,14 @@ async page => {
   const failures = [];
   app.on('pageerror', error => failures.push(error.message));
   const check = (condition, message) => { if (!condition) throw new Error(message); };
-  const mode = index => app.getByRole('navigation', { name: 'Game modes' }).getByRole('button').nth(index).click();
+  const mode = async index => {
+    const navigation = app.getByRole('navigation', { name: 'Game modes' });
+    if (index === 5) await navigation.getByRole('button', { name: 'Create a puzzle' }).click();
+    else {
+      await navigation.getByRole('link').nth(index).click();
+      await app.getByRole('main', { name: 'Word ladder game' }).waitFor();
+    }
+  };
   const checks = [];
   try {
     // Keep optional analytics traffic outside this local gameplay check.

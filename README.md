@@ -2,10 +2,10 @@
 
 A complete, feature-rich word ladder puzzle game built for the browser. Transform any 4-letter starting word into **"POOP"** one valid letter at a time!
 
-[![Play Poople Live](https://img.shields.io/badge/🎮%20Play%20Online-Live%20Demo-emerald?style=for-the-badge&logo=googlechrome)](https://zey-ro.github.io/poople/)
+[![Play Poople Live](https://img.shields.io/badge/🎮%20Play%20Online-Live%20Demo-emerald?style=for-the-badge&logo=googlechrome)](https://poople.site/)
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Repository-blue?style=for-the-badge&logo=github)](https://github.com/ZEY-RO/poople)
 
-🌐 **Live Game URL**: [https://zey-ro.github.io/poople/](https://zey-ro.github.io/poople/)
+🌐 **Live Game URL**: [https://poople.site/](https://poople.site/)
 
 ---
 
@@ -55,6 +55,7 @@ npm run preview
 ```bash
 npm test       # Engine, puzzle, storage, and optional-service regressions
 npm run build  # TypeScript and production bundle
+npm run check:seo # Verify the generated HTML, canonical URLs, sitemap, and assets
 ```
 
 For browser checks, start the local app and use Playwright CLI:
@@ -65,6 +66,22 @@ playwright-cli run-code --filename=tests/ui-smoke.js
 ```
 
 Use the port printed by Vite if 5173 is already in use. The browser checks use an isolated context and cover daily save/restore, archive links, keyboard input, dialogs, Rush expiration, bot rematches, campaign progression, and narrow mobile screens. Development analytics stay local; production can use the configured Supabase service.
+
+## Search visibility
+
+The production build generates eight static HTML pages: the homepage, five mode pages, and the How to Play and Word Ladder Strategies guides. Each has a distinct title, description, canonical URL, social preview, visible content, and factual structured data. The guides work without JavaScript and do not load the game bundle. `src/seo/content.ts` is the source for the page content; the Vite build generates `dist/sitemap.xml` from the same destinations without invented modification dates.
+
+Mode links use real URLs that work when opened directly on GitHub Pages. Old `?mode=` bookmarks redirect to the matching mode page, while custom puzzle and daily archive links remain supported. Query variations canonicalize to their underlying page.
+
+For the production browser checks, build and start `npm run preview`, open its printed URL with Playwright CLI, then run:
+
+```bash
+playwright-cli run-code --filename=tests/ui-seo.js
+```
+
+This covers all eight pages with JavaScript disabled, mobile layouts, metadata, and old shared links. The deployment workflow runs unit regressions, the production build, and `check:seo` before uploading to Pages.
+
+After publishing, submit [the sitemap](https://poople.site/sitemap.xml) in the verified Google Search Console property, inspect the homepage and new mode URLs, and monitor Pages and Performance reports. Compare search clicks, impressions, CTR, and queries over consistent date ranges as Google recrawls. Useful links from relevant game communities and original puzzle content can help people discover Poople; avoid purchased links or automated submissions. Search rankings and indexing are determined by Google.
 
 ---
 

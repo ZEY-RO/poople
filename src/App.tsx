@@ -7,6 +7,7 @@ import { isValidStep, findShortestPath, getPar, getRandomPuzzle, isDeadEnd } fro
 import { getDailyPuzzle, formatDateToKey } from './engine/daily';
 import { BOT_CONFIGS, getNextBotMove, getRandomThinkDelay } from './engine/bot';
 import { CAMPAIGN_STAGES } from './engine/campaign';
+import { resolveInitialMode } from './seo/routes';
 
 import { Header } from './components/Header';
 import { LadderBoard } from './components/LadderBoard';
@@ -38,7 +39,7 @@ export const App: React.FC = () => {
   const [stats, setStats] = useState(loadStats);
 
   // Active Mode
-  const [mode, setMode] = useState<GameMode>('daily');
+  const [mode, setMode] = useState<GameMode>(() => resolveInitialMode(window.location));
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
 
   // Core Game State
@@ -233,10 +234,10 @@ export const App: React.FC = () => {
     }
   }, [mode, difficulty, selectedBot, currentCampaignStage, startWord, targetWord]);
 
-  // Initial load - Support mode=unlimited, custom puzzles, and daily default
+  // Load named mode paths, older shared links, and custom puzzles.
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const modeParam = params.get('mode') as GameMode | null;
+    const initialMode = resolveInitialMode(window.location);
     const s = params.get('start');
     const t = params.get('target');
 
@@ -257,58 +258,10 @@ export const App: React.FC = () => {
       }
     }
 
-    if (modeParam && ['daily', 'unlimited', 'rush', 'versus', 'campaign'].includes(modeParam)) {
-      setMode(modeParam);
-      if (modeParam === 'campaign') {
-        setIsViewingCampaignMap(true);
-      } else if (modeParam === 'rush') {
-        setRushTimeLeft(120);
-        setRushScore(0);
-        setRushCombo(1);
-        setRushSolvedCount(0);
-        setIsRushPlaying(false);
-        startNewGame('rush');
-        setStatus('idle');
-      } else {
-        const dateParam = params.get('date');
-        const dateKey = parseDailyDate(dateParam);
-        startNewGame(modeParam, modeParam === 'daily' ? { dateKey } : undefined);
-      }
-    } else {
-      const dateParam = params.get('date');
-      const dateKey = parseDailyDate(dateParam);
-      startNewGame('daily', { dateKey });
-    }
-  }, []);
-
-  // Handle Mode Change
-  const handleSelectMode = (newMode: GameMode) => {
-    if (rushNextRef.current) clearTimeout(rushNextRef.current);
-    rushActiveRef.current = false;
-    setIsRushPlaying(false);
-    setIsWinModalOpen(false);
-    setMode(newMode);
-    analytics.trackModeSwitch(newMode);
-
-    // Sync URL without reload so players can share or bookmark their current mode (e.g. ?mode=unlimited)
-    try {
-      const url = new URL(window.location.href);
-      if (newMode === 'daily') {
-        url.searchParams.delete('mode');
-      } else {
-        url.searchParams.set('mode', newMode);
-      }
-      url.searchParams.delete('start');
-      url.searchParams.delete('target');
-      url.searchParams.delete('date');
-      window.history.replaceState({}, '', url.toString());
-    } catch {
-      // Ignore in non-browser environments
-    }
-
-    if (newMode === 'campaign') {
+    setMode(initialMode);
+    if (initialMode === 'campaign') {
       setIsViewingCampaignMap(true);
-    } else if (newMode === 'rush') {
+    } else if (initialMode === 'rush') {
       setRushTimeLeft(120);
       setRushScore(0);
       setRushCombo(1);
@@ -317,9 +270,11 @@ export const App: React.FC = () => {
       startNewGame('rush');
       setStatus('idle');
     } else {
-      startNewGame(newMode);
+      const dateParam = params.get('date');
+      const dateKey = parseDailyDate(dateParam);
+      startNewGame(initialMode, initialMode === 'daily' ? { dateKey } : undefined);
     }
-  };
+  }, []);
 
   // Current active word in ladder
   const currentWord = history.length > 0 ? history[history.length - 1].word : startWord;
@@ -566,7 +521,6 @@ export const App: React.FC = () => {
       {/* Top Navigation Header */}
       <Header
         currentMode={mode}
-        onSelectMode={handleSelectMode}
         onOpenStats={() => setIsStatsOpen(true)}
         onOpenSettings={() => setIsSettingsOpen(true)}
         onOpenTutorial={() => setIsTutorialOpen(true)}
@@ -583,14 +537,14 @@ export const App: React.FC = () => {
 
       <section className="page-intro" aria-labelledby="page-title">
         <div><div className="eyebrow">Small steps. Big word energy.</div>
-          <h1 id="page-title">{{ daily: 'Your daily detour.', unlimited: 'Keep the good words rolling.', rush: 'Think fast. Flush faster.', versus: 'A little friendly competition.', campaign: 'Climb your way to the throne.', custom: 'Your words. Their challenge.' }[mode]}</h1>
+          <h1 id="page-title">{mode === 'daily' && window.location.pathname === '/' ? 'Poople — free word ladder game' : { daily: 'Daily Poople — word ladder puzzle', unlimited: 'Poople Unlimited — word ladder game', rush: 'Poop Rush — timed word ladder game', versus: 'Poople Versus Bot — word ladder race', campaign: 'The Gauntlet — word ladder campaign', custom: 'Poople — custom word ladder puzzle' }[mode]}</h1>
           <p>{mode === 'campaign' && isViewingCampaignMap ? 'Fifty puzzles, five chapters. Pick a stage and find your way up.' : mode === 'rush' && status === 'idle' ? 'Two minutes on the clock. How many ladders can you solve?' : <>Change one letter at a time. Find your way from {startWord} to {targetWord}.</>}</p>
         </div>
         <span className="intro-badge"><Sparkles size={13} /> A little challenge. A fresh perspective.</span>
       </section>
       <div className="workspace">
       <div className="game-card">
-      <main className="game-main" aria-label="Word ladder game">
+      <main id="main-content" className="game-main" aria-label="Word ladder game" tabIndex={-1}>
         {/* Mode Specific Sub-Headers */}
         {mode === 'daily' && (
           <DailyModeView
@@ -851,15 +805,10 @@ export const App: React.FC = () => {
           initialStartWord={mode === 'custom' ? startWord : undefined}
           initialTargetWord={mode === 'custom' ? targetWord : undefined}
           onStartCustomPuzzle={(s, t) => {
-            rushActiveRef.current = false;
-            setIsRushPlaying(false);
-            setMode('custom');
-            startNewGame('custom', { customStart: s, customTarget: t });
-            const url = new URL(window.location.href);
+            const url = new URL('/', window.location.origin);
             url.searchParams.set('start', s);
             url.searchParams.set('target', t);
-            url.searchParams.delete('mode');
-            window.history.replaceState({}, '', url);
+            window.location.assign(url);
           }}
           onClose={() => setIsCustomModalOpen(false)}
         />

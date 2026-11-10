@@ -38,9 +38,7 @@ export const CustomPuzzleModal: React.FC<CustomPuzzleModalProps> = ({ onStartCus
 
   const handleCopy = async () => {
     if (!path) return;
-    const url = new URL(window.location.href);
-    url.search = '';
-    url.hash = '';
+    const url = new URL('/', window.location.origin);
     url.searchParams.set('start', startWord);
     url.searchParams.set('target', targetWord);
     setCopyStatus(await copyText(url.toString()) ? 'copied' : 'failed');
