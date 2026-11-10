@@ -15,6 +15,7 @@ export interface SeoPage {
   sections: SeoSection[];
   faqs?: { question: string; answer: string }[];
   mode?: GameMode;
+  tool?: 'solver';
 }
 
 export const SEO_PAGES: SeoPage[] = [
@@ -356,6 +357,49 @@ export const SEO_PAGES: SeoPage[] = [
       {
         question: 'What does a highlighted word in Moves mean?',
         answer: 'Highlighted choices are legal next words on a shortest route from the current word to the target. Other listed words are legal moves, but may lead to a longer route.',
+      },
+    ],
+  },
+  {
+    path: '/word-ladder-solver/',
+    title: 'Poople Solver — Free Four-Letter Word Ladder Helper',
+    description: 'Find a shortest four-letter word ladder with the free Poople solver. Enter start and target words, review each change, then play or share your puzzle.',
+    heading: 'Poople solver: find a word ladder',
+    tool: 'solver',
+    intro: [
+      'Enter any two four-letter words to check whether a ladder connects them in Poople’s dictionary. The target starts at POOP, but you can choose another word. A solution appears only when you ask for it.',
+    ],
+    sections: [
+      {
+        heading: 'How to use the word ladder solver',
+        paragraphs: [
+          'Type the word you are starting from and the word you want to reach, then choose Find shortest ladder. Each step changes exactly one letter in the same position. The result counts moves rather than words: POLL → POOL → POOP has three words and two moves.',
+          'The solver shows one shortest route, the letter that changes at each step, and definitions where the game has them. Other routes can be equally short. Use Copy solution to keep the route, or Play this puzzle to try the pair yourself without a countdown.',
+        ],
+      },
+      {
+        heading: 'Build a puzzle or check a connection',
+        paragraphs: [
+          'Try COLD as the starting word and WARM as the target to explore a classic word ladder. For a Poople puzzle, leave the target at POOP and enter the starting word shown on your board. Finding a route here does not submit moves to your game.',
+          'If you want to solve the puzzle yourself, start with the strategy guide or use an in-game Hint before revealing the whole route. This tool is also useful for checking whether a custom challenge is connected before sharing it with a friend.',
+        ],
+      },
+      {
+        heading: 'The dictionary determines the route',
+        paragraphs: [
+          'Results use the accepted word list in this version of Poople. A familiar word may be missing from that list, and a route that works here may differ from a solution in another word game. If either endpoint is not accepted, the solver explains which word to change.',
+          'Some accepted words belong to disconnected groups, so a valid word pair does not always have a solution. When a route exists, the move count is the minimum for this dictionary. No account or download is required; calculations run in your browser.',
+        ],
+      },
+    ],
+    faqs: [
+      {
+        question: 'Can I use a target other than POOP?',
+        answer: 'Yes. Both endpoints can be any different four-letter words accepted by this game. If they connect, the solver finds a shortest ladder between them.',
+      },
+      {
+        question: 'Does opening this page reveal today’s answer?',
+        answer: 'No. The page starts with an example pair and does not calculate a route until you choose Find shortest ladder. Enter a word from your current puzzle only when you want to see a solution.',
       },
     ],
   },

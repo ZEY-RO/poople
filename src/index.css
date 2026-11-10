@@ -592,6 +592,48 @@ button:disabled { cursor: not-allowed; }
 .word-entry:focus-within .letter-tile { border-color: var(--accent); }
 .word-entry:focus-within { border-radius: 10px; outline: 2px solid var(--accent-light); outline-offset: 4px; }
 
+.solver-tool { margin: 26px 0 32px; padding: 26px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 20px; color: var(--text-primary); }
+.solver-tool .solver-help { margin: 0 0 18px; font-size: 13px; color: var(--text-secondary); }
+.solver-fields { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 18px; align-items: start; }
+.solver-field { min-width: 0; }
+.solver-field label { display: block; font-size: 13px; font-weight: 650; margin-bottom: 8px; }
+.solver-field input { width: 100%; min-width: 0; padding: 14px 12px; background: var(--bg-card-muted); border: 1.5px solid var(--border-color); border-radius: 10px; text-align: center; font-size: 26px; font-weight: 700; letter-spacing: 5px; color: var(--text-primary); }
+.solver-field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.solver-field input[aria-invalid='true'] { border-color: #a22b2b; }
+.solver-tool .solver-field-error { color: #a22b2b; font-size: 12px; line-height: 1.6; margin: 8px 0 0; }
+.solver-field-arrow { padding-top: 38px; color: var(--text-muted); font-size: 24px; }
+.solver-submit, .solver-copy, .solver-play { min-height: 44px; border-radius: 10px; padding: 12px 18px; font-size: 13px; font-weight: 650; display: inline-flex; align-items: center; justify-content: center; }
+.solver-submit { background: var(--accent); color: var(--accent-text); margin-top: 20px; }
+.solver-submit:hover { background: var(--accent-hover); }
+.solver-submit:disabled, .solver-copy:disabled { opacity: .55; cursor: default; }
+.solver-tool .solver-status { font-size: 13px; margin: 20px 0 0; color: var(--text-secondary); }
+.solver-result { margin-top: 26px; padding-top: 4px; border-top: 1px solid var(--border-color); }
+.solver-tool .solver-result h2 { font-size: 25px; }
+.solver-tool .solver-move-count { font-size: 13px; color: var(--text-secondary); }
+.solver-tool .solver-plain-path { font-weight: 650; font-size: 14px; overflow-wrap: anywhere; padding: 12px 14px; background: var(--bg-secondary); border-radius: 10px; }
+.solver-ladder { list-style: none; padding: 0; margin: 22px 0; }
+.solver-tool .solver-step { margin: 0; padding: 15px 0; border-bottom: 1px solid var(--border-color); }
+.solver-step-heading { display: flex; align-items: center; gap: 18px; }
+.solver-step-number { min-width: 56px; font-size: 12px; color: var(--text-secondary); }
+.solver-word { display: flex; gap: 7px; }
+.solver-letter { display: inline-grid; place-items: center; width: 43px; height: 47px; font-size: 23px; font-weight: 650; border-radius: 8px; background: var(--bg-card-muted); border: 1px solid var(--border-color); }
+.solver-letter.is-changed { background: var(--accent); color: var(--accent-text); border-color: var(--accent); }
+.solver-tool .solver-change, .solver-tool .solver-definition { font-size: 12px; line-height: 1.7; margin: 9px 0 0; color: var(--text-secondary); }
+.solver-result-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.solver-copy { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--accent); }
+.solver-tool .solver-play { background: var(--accent); color: var(--accent-text); text-decoration: none; }
+.solver-tool .solver-copy-status { font-size: 12px; color: var(--text-secondary); margin-bottom: 0; }
+@media (max-width: 540px) {
+  .solver-tool { padding: 20px 16px; border-radius: 15px; }
+  .solver-fields { gap: 10px; }
+  .solver-field input { font-size: 21px; letter-spacing: 2px; padding: 12px 6px; }
+  .solver-field-arrow { padding-top: 35px; font-size: 18px; }
+  .solver-submit { width: 100%; }
+  .solver-word { gap: 4px; }
+  .solver-letter { width: 33px; height: 40px; font-size: 20px; }
+  .solver-step-heading { gap: 12px; }
+}
+
 .skip-link { position: absolute; z-index: 100; top: -100px; left: 16px; padding: 12px 18px; color: var(--accent-text); background: var(--accent); border-radius: 8px; }
 .skip-link:focus { top: 12px; }
 .game-loading { max-width: 980px; margin: 0 auto; padding: 40px 24px; min-height: 100vh; color: var(--text-primary); }

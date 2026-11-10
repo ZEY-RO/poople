@@ -1,6 +1,7 @@
 import React from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { SEO_PAGES, type SeoPage } from './content';
+import { WordLadderSolver } from '../components/WordLadderSolver';
 
 export const SITE_URL = 'https://poople.site';
 
@@ -13,6 +14,7 @@ const navigation = [
   ['/campaign/', 'The Gauntlet'],
   ['/how-to-play/', 'How to play'],
   ['/word-ladder-strategies/', 'Word ladder strategies'],
+  ['/word-ladder-solver/', 'Word ladder solver'],
 ] as const;
 
 function structuredData(page: SeoPage) {
@@ -33,16 +35,25 @@ function structuredData(page: SeoPage) {
       isPartOf: { '@id': `${SITE_URL}/#website` },
       publisher: { '@id': `${SITE_URL}/#organization` },
       ...(page.mode ? { about: { '@id': `${SITE_URL}/#game` } } : {}),
+      ...(page.tool === 'solver' ? { mainEntity: { '@id': `${url}#solver` } } : {}),
       ...(page.path !== '/' ? { breadcrumb: { '@id': `${url}#breadcrumb` } } : {}),
     },
   ];
   if (page.mode) graph.push({
     '@type': 'WebApplication', '@id': `${SITE_URL}/#game`, name: 'Poople',
-    url: `${SITE_URL}/`, image: `${SITE_URL}/og-image.jpg`,
+    url: `${SITE_URL}/`, image: `${SITE_URL}/social-card.png`,
     description: 'A free browser word ladder game. Change one letter at a time to reach POOP, with daily, unlimited, timed, bot and campaign modes.',
     applicationCategory: 'GameApplication', operatingSystem: 'Any', inLanguage: 'en',
     browserRequirements: 'Requires JavaScript and a modern web browser.',
     isAccessibleForFree: true,
+    offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
+    publisher: { '@id': `${SITE_URL}/#organization` },
+  });
+  if (page.tool === 'solver') graph.push({
+    '@type': 'WebApplication', '@id': `${url}#solver`, name: 'Poople Word Ladder Solver',
+    url, description: page.description, applicationCategory: 'UtilitiesApplication',
+    operatingSystem: 'Any', inLanguage: 'en', isAccessibleForFree: true,
+    browserRequirements: 'Requires JavaScript and a modern web browser.',
     offers: { '@type': 'Offer', price: '0', priceCurrency: 'USD' },
     publisher: { '@id': `${SITE_URL}/#organization` },
   });
@@ -68,15 +79,15 @@ export function renderHead(page: SeoPage): string {
     <meta property="og:url" content={url} />
     <meta property="og:title" content={page.title} />
     <meta property="og:description" content={page.description} />
-    <meta property="og:image" content={`${SITE_URL}/og-image.jpg`} />
-    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image" content={`${SITE_URL}/social-card.png`} />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Poople — change one letter at a time in a free word ladder game" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={page.title} />
     <meta name="twitter:description" content={page.description} />
-    <meta name="twitter:image" content={`${SITE_URL}/og-image.jpg`} />
+    <meta name="twitter:image" content={`${SITE_URL}/social-card.png`} />
     <meta name="twitter:image:alt" content="Poople word ladder game" />
     <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData(page)).replace(/</g, '\\u003c') }} />
   </React.Fragment>);
@@ -90,7 +101,8 @@ function PageContent({ page }: { page: SeoPage }) {
     {page.path !== '/' && <nav aria-label="Breadcrumb" className="breadcrumbs"><a href="/">Poople</a><span aria-hidden="true"> / </span><span>{page.heading}</span></nav>}
     <Heading id="guide-title">{page.heading}</Heading>
     {page.intro.map(text => <p key={text}>{text}</p>)}
-    {!page.mode && <a className="guide-play-link" href="/unlimited/">Try an unlimited word ladder →</a>}
+    {page.tool === 'solver' && <div id="solver-root"><WordLadderSolver /></div>}
+    {!page.mode && !page.tool && <a className="guide-play-link" href="/unlimited/">Try an unlimited word ladder →</a>}
     {page.sections.map(section => <section key={section.heading}>
       {page.mode ? <h3>{section.heading}</h3> : <h2>{section.heading}</h2>}
       {section.paragraphs.map(text => <p key={text}>{text}</p>)}
@@ -116,16 +128,20 @@ function replaceRegion(html: string, name: string, value: string): string {
   return html.slice(0, a + start.length) + '\n' + value + '\n' + html.slice(b);
 }
 
-export function renderPage(html: string, page: SeoPage): string {
+export function renderPage(html: string, page: SeoPage, solverEntry = '/src/solver-main.tsx'): string {
   let output = replaceRegion(html, 'head', renderHead(page));
   output = replaceRegion(output, 'content', renderToStaticMarkup(<PageContent page={page} />));
   output = replaceRegion(output, 'game', page.mode ? renderToStaticMarkup(
     <div id="root"><main id="main-content" className="game-loading"><h1>{page.heading}</h1><p>The interactive word ladder is loading. <a href="#game-guide">Read the rules and game guide</a> while you wait.</p><noscript><style>{'.game-loading { min-height: 0; }'}</style>Enable JavaScript to play Poople. The game guides and rules are available below without JavaScript.</noscript></main></div>
   ) : '<div id="root"></div>');
   if (!page.mode) {
-    // Guides need only HTML and CSS; do not download the game engine or services.
+    // Guides need no JavaScript. The solver uses its own small entry instead of
+    // downloading the game, audio, analytics, and optional remote services.
     output = output.replace(/<script\b[^>]*\btype="module"[^>]*>[\s\S]*?<\/script>/g, '')
       .replace(/<link\b[^>]*\brel="modulepreload"[^>]*>/g, '');
+    if (page.tool === 'solver') {
+      output = output.replace(/\s*<\/body>/, `\n    ${renderToStaticMarkup(<script type="module" src={solverEntry} />)}\n  </body>`);
+    }
   }
   return output;
 }

@@ -26,7 +26,7 @@ const { SEO_PAGES, SITE_URL, renderHead, renderPage, renderSitemap,
   getModePath, resolveInitialMode, normalizeLegacyGameUrl } = compiled.exports;
 
 const expectedPaths = ['/', '/unlimited/', '/daily/', '/rush/', '/versus/',
-  '/campaign/', '/how-to-play/', '/word-ladder-strategies/'];
+  '/campaign/', '/how-to-play/', '/word-ladder-strategies/', '/word-ladder-solver/'];
 const sourceTemplate = readFileSync(path.resolve('index.html'), 'utf8');
 // A built Vite document contains stylesheet and modulepreload assets in addition
 // to its entry script. Guide documents must keep the former and drop the latter.
@@ -57,7 +57,7 @@ function schema(html) {
 test('every indexable destination has unique metadata and a normalized static path', () => {
   assert.deepEqual(SEO_PAGES.map(page => page.path).sort(), [...expectedPaths].sort());
   for (const key of ['path', 'title', 'description']) {
-    assert.equal(new Set(SEO_PAGES.map(page => page[key])).size, 8, `unique ${key}`);
+    assert.equal(new Set(SEO_PAGES.map(page => page[key])).size, expectedPaths.length, `unique ${key}`);
     assert.ok(SEO_PAGES.every(page => page[key].trim().length > 0));
   }
   assert.ok(SEO_PAGES.every(page => page.path.startsWith('/') && page.path.endsWith('/')));
@@ -80,10 +80,14 @@ test('canonical, social, and structured-data URLs describe the current static pa
     assert.equal(data['@graph'].find(node => node['@type'] === 'WebPage').url, url);
     assert.ok(!JSON.stringify(data).match(/aggregateRating|ratingValue|ratingCount|FAQPage/), 'no unsupported ratings or FAQ rich-result claims');
     const application = data['@graph'].find(node => node['@type'] === 'WebApplication');
-    assert.equal(Boolean(application), Boolean(page.mode));
+    assert.equal(Boolean(application), Boolean(page.mode || page.tool));
     if (application) {
       assert.equal(application.isAccessibleForFree, true);
       assert.equal(application.offers.price, '0');
+      if (page.tool) {
+        assert.equal(application.url, url, 'the solver describes its own application');
+        assert.notEqual(application.applicationCategory, 'GameApplication', 'a solver is a utility rather than a playable game mode');
+      }
     }
   }
 });
@@ -115,14 +119,33 @@ test('all pages expose a single H1, visible content, and crawlable internal dest
   }
 });
 
-test('static guides retain stylesheet assets while removing game scripts and module preloads', () => {
+test('static guides need no scripts and the solver loads only its dedicated interactive entry', () => {
   for (const page of SEO_PAGES) {
-    const html = renderPage(template, page);
+    const html = renderPage(template, page, '/assets/solver-test.js');
     assert.ok(tags(html, 'link').some(tag => tag.rel === 'stylesheet' && tag.href === '/assets/game.css'));
-    const gameScripts = tags(html, 'script').filter(script => script.type === 'module');
+    const scripts = tags(html, 'script').filter(script => script.type === 'module');
     const preloads = tags(html, 'link').filter(link => link.rel === 'modulepreload');
-    assert.equal(gameScripts.length > 0, Boolean(page.mode), page.path);
+    assert.equal(scripts.length > 0, Boolean(page.mode || page.tool), page.path);
     assert.equal(preloads.length > 0, Boolean(page.mode), page.path);
+    if (page.tool) {
+      assert.deepEqual(scripts.map(script => script.src), ['/assets/solver-test.js']);
+      assert.ok(!html.includes('/src/main.tsx'), 'solver document must not bootstrap the game');
+      assert.ok(html.includes('id="solver-root"'), 'interactive form has its own mount');
+      assert.equal(tags(html, 'form').length, 1, 'solver form is present before JavaScript');
+      const fields = tags(html, 'input').filter(input => input.type !== 'hidden');
+      assert.equal(fields.length, 2, 'both word fields are available in the initial HTML');
+    }
+  }
+});
+
+test('social metadata references the factual branded PNG with explicit dimensions', () => {
+  for (const page of SEO_PAGES) {
+    const meta = tags(renderHead(page), 'meta');
+    assert.equal(meta.find(tag => tag.property === 'og:image').content, `${SITE_URL}/social-card.png`);
+    assert.equal(meta.find(tag => tag.property === 'og:image:type').content, 'image/png');
+    assert.equal(meta.find(tag => tag.property === 'og:image:width').content, '1200');
+    assert.equal(meta.find(tag => tag.property === 'og:image:height').content, '630');
+    assert.equal(meta.find(tag => tag.name === 'twitter:image').content, `${SITE_URL}/social-card.png`);
   }
 });
 
@@ -169,6 +192,7 @@ test('named modes resolve from routes and legacy bookmarks without changing cust
   assert.equal(normalizeLegacyGameUrl({ href: `${SITE_URL}/index.html?start=LOOP&target=POOP` }), '/?start=LOOP&target=POOP');
   assert.equal(normalizeLegacyGameUrl({ href: `${SITE_URL}/how-to-play/?mode=rush` }), null, 'guide content does not redirect into game');
   assert.equal(normalizeLegacyGameUrl({ href: `${SITE_URL}/how-to-play/index.html` }), null, 'guide document aliases need no game routing');
+  assert.equal(normalizeLegacyGameUrl({ href: `${SITE_URL}/word-ladder-solver/?start=COLD&target=POOP` }), null, 'the solver owns its word-pair parameters');
   assert.equal(normalizeLegacyGameUrl({ href: `${SITE_URL}/?start=LOOP&target=POOP` }), null, 'valid shared puzzle is already canonicalized to the game root');
   assert.equal(normalizeLegacyGameUrl({ href: `${SITE_URL}/daily/?start=loop&target=poop&mode=daily&date=2026-10-01&utm_source=friend#game` }),
     '/?start=LOOP&target=POOP&utm_source=friend#game', 'valid custom pair wins over named mode and keeps attribution');

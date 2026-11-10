@@ -6,6 +6,7 @@ import { SEO_PAGES } from './src/seo/content';
 import { renderPage, renderSitemap } from './src/seo/render';
 
 let building = false;
+let solverEntry = '';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -27,6 +28,12 @@ export default defineConfig({
         return renderPage(html, page);
       },
     },
+    generateBundle(_options, bundle) {
+      const entry = Object.values(bundle).find(output => output.type === 'chunk' && output.isEntry
+        && output.facadeModuleId === resolve('src/solver-main.tsx'));
+      if (!entry) throw new Error('The word ladder solver entry is missing from the production bundle.');
+      solverEntry = `/${entry.fileName}`;
+    },
     async closeBundle() {
       if (!building) return;
       const directory = resolve('dist');
@@ -34,7 +41,7 @@ export default defineConfig({
       for (const page of SEO_PAGES) {
         const target = resolve(directory, `.${page.path}`);
         await mkdir(target, { recursive: true });
-        await writeFile(resolve(target, 'index.html'), renderPage(template, page));
+        await writeFile(resolve(target, 'index.html'), renderPage(template, page, solverEntry));
       }
       await writeFile(resolve(directory, 'sitemap.xml'), renderSitemap());
     },
@@ -42,6 +49,7 @@ export default defineConfig({
   base: '/',
   build: {
     rollupOptions: {
+      input: { game: resolve('index.html'), solver: resolve('src/solver-main.tsx') },
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],

@@ -69,7 +69,7 @@ Use the port printed by Vite if 5173 is already in use. The browser checks use a
 
 ## Search visibility
 
-The production build generates eight static HTML pages: the homepage, five mode pages, and the How to Play and Word Ladder Strategies guides. Each has a distinct title, description, canonical URL, social preview, visible content, and factual structured data. The guides work without JavaScript and do not load the game bundle. `src/seo/content.ts` is the source for the page content; the Vite build generates `dist/sitemap.xml` from the same destinations without invented modification dates.
+The production build generates nine static HTML pages: the homepage, five mode pages, the How to Play and Word Ladder Strategies guides, and a dedicated Word Ladder Solver. Each has a distinct title, description, canonical URL, social preview, visible content, and factual structured data. The guides work without JavaScript and do not load the game bundle. The solver includes its form in the static HTML and loads a separate entry without the game, audio, analytics, or Supabase services. `src/seo/content.ts` is the source for the page content; the Vite build generates `dist/sitemap.xml` from the same destinations without invented modification dates.
 
 Mode links use real URLs that work when opened directly on GitHub Pages. Old `?mode=` bookmarks redirect to the matching mode page, while custom puzzle and daily archive links remain supported. Query variations canonicalize to their underlying page.
 
@@ -79,7 +79,9 @@ For the production browser checks, build and start `npm run preview`, open its p
 playwright-cli run-code --filename=tests/ui-seo.js
 ```
 
-This covers all eight pages with JavaScript disabled, mobile layouts, metadata, and old shared links. The deployment workflow runs unit regressions, the production build, and `check:seo` before uploading to Pages.
+This covers all nine pages with JavaScript disabled, mobile layouts, metadata, old shared links, and the solver form. The deployment workflow runs unit regressions, the production build, and `check:seo` before uploading to Pages.
+
+The social preview uses the current visual style and a dictionary-checked two-move example. Its editable vector source is `scripts/social-card.svg`; the committed PNG can be regenerated with `rsvg-convert --width 1200 --height 630 scripts/social-card.svg --output public/social-card.png` when librsvg is installed. The deployment check verifies that the metadata points to a real PNG with the declared dimensions.
 
 After publishing, submit [the sitemap](https://poople.site/sitemap.xml) in the verified Google Search Console property, inspect the homepage and new mode URLs, and monitor Pages and Performance reports. Compare search clicks, impressions, CTR, and queries over consistent date ranges as Google recrawls. Useful links from relevant game communities and original puzzle content can help people discover Poople; avoid purchased links or automated submissions. Search rankings and indexing are determined by Google.
 

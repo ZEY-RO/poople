@@ -737,6 +737,7 @@ export const App: React.FC = () => {
           </div>
           <div className="guide-example" aria-label="LOOP to POOP: change the first letter"><div className="mini-word">{'LOOP'.split('').map((l,i) => <span key={i}>{l}</span>)}</div><ArrowRight size={14} className="text-theme-text-muted" /><div className="mini-word">{'POOP'.split('').map((l,i) => <span className={i === 0 ? 'changed' : ''} key={i}>{l}</span>)}</div></div>
           <button className="text-link" onClick={() => setIsTutorialOpen(true)}>A quick walkthrough <ArrowRight size={13} /></button>
+          <a className="text-link mt-3" href="/word-ladder-solver/">Check a word ladder <ArrowRight size={13} /></a>
         </section>
         <section className="guide-card streak-card">
           <div className="eyebrow">Your daily ritual</div>
