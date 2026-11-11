@@ -11,12 +11,14 @@ A complete, feature-rich word ladder puzzle game built for the browser. Transfor
 
 ## 🎮 Game Modes
 
-- 📅 **Daily Poople**: Date-seeded daily puzzle with streak tracking, midnight countdown, and a 30-day calendar archive.
-- ♾️ **Unlimited Mode**: Endless random solvable ladders across 4 difficulty tiers (*Easy, Medium, Hard, Master*).
-- ⚡ **Poop Rush**: 2-minute fast-paced time attack challenge with dynamic timer bars, combo multipliers, skip penalties, and high-score records.
-- 🤖 **Versus Bot (AI Toilet Battle)**: Real-time head-to-head race against 3 AI opponents (*Sloppy Plunger, Speedy Flush, Grandmaster Commode*) with animated live race tracks.
-- 🏆 **The Gauntlet (50-Stage Campaign)**: 50 hand-crafted progression stages across 5 themed chapters with a 3-star Par rating system.
+- 📅 **[Daily Poople](https://poople.site/daily/)**: Date-seeded daily puzzle with streak tracking, midnight countdown, and a 30-day calendar archive.
+- ♾️ **[Unlimited Mode](https://poople.site/unlimited/)**: Endless random solvable ladders across 4 difficulty tiers (*Easy, Medium, Hard, Master*).
+- ⚡ **[Poop Rush](https://poople.site/rush/)**: 2-minute fast-paced time attack challenge with dynamic timer bars, combo multipliers, skip penalties, and high-score records.
+- 🤖 **[Versus Bot (AI Toilet Battle)](https://poople.site/versus/)**: Real-time head-to-head race against 3 AI opponents (*Sloppy Plunger, Speedy Flush, Grandmaster Commode*) with animated live race tracks.
+- 🏆 **[The Gauntlet (50-Stage Campaign)](https://poople.site/campaign/)**: 50 hand-crafted progression stages across 5 themed chapters with a 3-star Par rating system.
 - 🎨 **Custom Puzzle Builder**: Create custom starting & target words with real-time solvability testing and shareable URL query parameters.
+
+New to word ladders? Read [How to Play Poople](https://poople.site/how-to-play/) and [Word Ladder Strategies](https://poople.site/word-ladder-strategies/), or use the [Word Ladder Solver](https://poople.site/word-ladder-solver/) to find a shortest path between two four-letter words.
 
 ---
 
